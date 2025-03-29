@@ -1,0 +1,83 @@
+{
+    "name": "yournamespace/yourproject",
+    "description": "Provides yourproject functionality.",
+    "license": "GPL-2.0-or-later",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Your Name",
+            "email": "yourproject@yournamespace.com",
+            "homepage": "https://yournamespace.com",
+            "role": "Maintainer"
+        }
+    ],
+    "homepage": "https://github.com/yournamespace/yourproject",
+    "support": {
+        "issues": "https://github.com/yournamespace/yourproject/issues",
+        "source": "https://github.com/yournamespace/yourproject"
+    },
+    "require": {
+        "php": ">=8.3",
+        "symfony/console": "^7"
+    },
+    "require-dev": {
+        "bamarni/composer-bin-plugin": "^1.8",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1",
+        "drupal/coder": "^8.3",
+        "ergebnis/composer-normalize": "^2.42",
+        "mikey179/vfsstream": "^1.6",
+        "opis/closure": "^4.0",
+        "phpmd/phpmd": "^2.13",
+        "phpstan/phpstan": "^2",
+        "phpunit/phpunit": "^12",
+        "rector/rector": "^2"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "YourNamespace\\App\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "YourNamespace\\App\\Tests\\": "tests/phpunit"
+        },
+        "classmap": [
+            "tests/phpunit"
+        ]
+    },
+    "bin": [
+        "php-command",
+        "php-script"
+    ],
+    "config": {
+        "allow-plugins": {
+            "bamarni/composer-bin-plugin": true,
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "ergebnis/composer-normalize": true
+        },
+        "discard-changes": true,
+        "sort-packages": true
+    },
+    "scripts": {
+        "build": [
+            "@composer bin box require --dev humbug/box",
+            "box validate",
+            "box compile"
+        ],
+        "lint": [
+            "cp php-script php-script.php && phpcs; rm php-script.php",
+            "phpstan",
+            "phpmd --exclude vendor,vendor-bin,node_modules . text phpmd.xml",
+            "rector --clear-cache --dry-run"
+        ],
+        "lint-fix": [
+            "rector --clear-cache",
+            "cp php-script php-script.php && phpcbf; rm php-script.php"
+        ],
+        "reset": "rm -Rf vendor vendor-bin composer.lock",
+        "test": "phpunit --no-coverage",
+        "test-coverage": "phpunit"
+    }
+}

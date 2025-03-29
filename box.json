@@ -1,0 +1,13 @@
+{
+    "output": ".build/php-command.phar",
+    "compression": "GZ",
+    "finder": [
+        {
+            "in": "./",
+            "exclude": [
+                "php-script",
+                "tests"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,80 @@
+name: Test Scaffold
+
+# Workflow to **validate** the **integrity** of the scaffold template itself.
+# This workflow will be automatically removed from the scaffolded project
+# after running init.sh script.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+      - 'feature/**'
+  workflow_dispatch:
+    inputs:
+      enable_terminal:
+        type: boolean
+        description: 'Enable terminal session.'
+        required: false
+        default: false
+
+jobs:
+  test-scaffold:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+
+      - name: Check coding standards
+        uses: luizm/action-sh-checker@v0.9.0
+        env:
+          SHFMT_OPTS: -i 2 -ci -s -d
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          cache: 'npm'
+          cache-dependency-path: tests/scaffold/package-lock.json
+
+      - name: Install Kcov
+        run: |
+          KCOV_VERSION=v43 && \
+          sudo apt update && sudo apt install -y git cmake g++ libcurl4-openssl-dev zlib1g-dev libdw-dev libiberty-dev binutils-dev && \
+          git clone https://github.com/SimonKagstrom/kcov.git && \
+          cd kcov && git checkout ${KCOV_VERSION} && mkdir build && cd build && \
+          cmake .. && make && sudo make install && \
+          kcov --version
+
+      - name: Install dependencies
+        run: npm --prefix=tests/scaffold ci
+
+      - name: Run tests
+        run: kcov --include-pattern=.sh,.bash --bash-parse-files-in-dir=. --exclude-pattern=vendor,node_modules,.coverage-html,.scaffold-coverage-html,docs,tests "$(pwd)"/.scaffold-coverage-html ./tests/scaffold/node_modules/.bin/bats tests/scaffold
+
+      - name: Upload coverage report as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{github.job}}-code-coverage-report
+          path: .scaffold-coverage-html
+          include-hidden-files: true
+          if-no-files-found: error
+
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v5
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        with:
+          directory: .scaffold-coverage-html
+          fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Setup tmate session
+        if: ${{ !cancelled() && github.event.inputs.enable_terminal }}
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30
