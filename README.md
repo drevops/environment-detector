@@ -21,7 +21,7 @@
 
 ## Approach
 
-The type detection is based on a two-part process:
+The type detection is based on a three-part process:
 
 1. Provider Detection: Hosting environments expose certain metadata (e.g.,
    environment variables or files). These are used to identify the active
@@ -30,6 +30,8 @@ The type detection is based on a two-part process:
    to a predefined or custom type (e.g., dev, stage, prod). This type becomes
    the central reference point for targeting environment-specific behavior,
    configuration, or deployment logic from within a consumer application.
+3. Optional context handling: A provider can identify a context where it runs
+   (framework, CMS, runtime etc.) and make required adjustments.
 
 ## Features
 
@@ -39,6 +41,7 @@ The type detection is based on a two-part process:
   [Tugboat](src/Providers/Tugboat.php), [CircleCI](src/Providers/CircleCi.php),
   [GitHub Actions](src/Providers/GitHubActions.php), [GitLab CI](src/Providers/GitLabCi.php),
   [DDEV](src/Providers/Ddev.php), [Lando](src/Providers/Lando.php), [Docker](src/Providers/Docker.php)
+- Detects custom contexts: [Drupal](src/Contexts/Drupal.php)
 - Simple API to access environment and provider data
 - Allows adding a custom provider
 - Optional override for consumer-level customization of the existing matching

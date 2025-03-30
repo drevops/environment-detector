@@ -62,8 +62,9 @@ class LagoonTest extends ProviderTestBase {
     // @formatter:off
     // phpcs:disable Generic.Functions.FunctionCallArgumentSpacing.TooMuchSpaceAfterComma
     // phpcs:disable Drupal.WhiteSpace.Comma.TooManySpaces
+    // phpcs:disable Drupal.Files.LineLength.TooLong
     $matrix = [
-      // LAGOON_ENVIRONMENT_TYPE, LAGOON_PRODUCTION_BRANCH, LAGOON_GIT_BRANCH.
+      // LAGOON_ENVIRONMENT_TYPE, ENVIRONMENT_PRODUCTION_BRANCH, LAGOON_GIT_BRANCH.
       ['development', 'master',  'master',      Environment::PRODUCTION],
       ['development', 'master',  'main',        Environment::STAGE],
       ['development', 'master',  'release/123', Environment::STAGE],
@@ -152,6 +153,7 @@ class LagoonTest extends ProviderTestBase {
     // @formatter:on
     // phpcs:enable Generic.Functions.FunctionCallArgumentSpacing.TooMuchSpaceAfterComma
     // phpcs:enable Drupal.WhiteSpace.Comma.TooManySpaces
+    // phpcs:enable Drupal.Files.LineLength.TooLong
 
     $data = [];
 
@@ -163,7 +165,7 @@ class LagoonTest extends ProviderTestBase {
             static::envSet('LAGOON_ENVIRONMENT_TYPE', $item[0]);
           }
           if ($item[1] !== 'unset') {
-            static::envSet('LAGOON_PRODUCTION_BRANCH', $item[1]);
+            static::envSet('ENVIRONMENT_PRODUCTION_BRANCH', $item[1]);
           }
           if ($item[2] !== 'unset') {
             static::envSet('LAGOON_GIT_BRANCH', $item[2]);

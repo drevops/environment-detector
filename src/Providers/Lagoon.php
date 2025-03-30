@@ -55,9 +55,9 @@ class Lagoon extends AbstractProvider {
 
       // Try to identify production environment using a branch name for
       // the cases when the Lagoon environment is not marked as 'production' yet.
-      // Note that `LAGOON_PRODUCTION_BRANCH` is a custom variable that should be
+      // Note that `ENVIRONMENT_PRODUCTION_BRANCH` is a custom variable that should be
       // set in the Lagoon project settings.
-      if (!empty(getenv('LAGOON_GIT_BRANCH')) && !empty(getenv('LAGOON_PRODUCTION_BRANCH')) && getenv('LAGOON_GIT_BRANCH') === getenv('LAGOON_PRODUCTION_BRANCH')) {
+      if (!empty(getenv('LAGOON_GIT_BRANCH')) && !empty(getenv('ENVIRONMENT_PRODUCTION_BRANCH')) && getenv('LAGOON_GIT_BRANCH') === getenv('ENVIRONMENT_PRODUCTION_BRANCH')) {
         $type = Environment::PRODUCTION;
       }
       // `main` or `master` is a Stage if another branch is used for production.
@@ -71,6 +71,41 @@ class Lagoon extends AbstractProvider {
     }
 
     return $type;
+  }
+
+  /**
+   * Applies Drupal context.
+   */
+  public function applyContextDrupal(?array $data = NULL): void {
+    if (!is_array($data) || empty($data['settings'])) {
+      return;
+    }
+
+    $settings = &$data['settings'];
+
+    // Lagoon reverse proxy settings.
+    $settings['reverse_proxy'] = TRUE;
+
+    // Reverse proxy settings.
+    $settings['reverse_proxy_header'] = 'HTTP_TRUE_CLIENT_IP';
+
+    // Cache prefix.
+    $settings['cache_prefix']['default'] = getenv('LAGOON_PROJECT') . '_' . (getenv('LAGOON_GIT_SAFE_BRANCH') ?: getenv('ENVIRONMENT_PRODUCTION_BRANCH'));
+
+    // URL when accessed from PHP processes in Lagoon.
+    $settings['trusted_host_patterns'][] = '^nginx\-php$';
+
+    // Public Lagoon URL.
+    $settings['trusted_host_patterns'][] = '^.+\.au\.amazee\.io$';
+
+    // Lagoon routes.
+    $routes = $this->data()['LAGOON_ROUTES'] ?? [];
+    if (!empty($routes)) {
+      $patterns = str_replace(['.', 'https://', 'http://', ','], [
+        '\.', '', '', '|',
+      ], $routes);
+      $settings['trusted_host_patterns'][] = '^' . $patterns . '$';
+    }
   }
 
 }

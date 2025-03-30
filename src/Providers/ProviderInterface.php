@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Providers;
 
+use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
+
 interface ProviderInterface {
 
   /**
@@ -46,5 +48,7 @@ interface ProviderInterface {
    *   The provider data.
    */
   public function data(): array;
+
+  public function applyContext(ContextInterface $context, ?array &$data = NULL): void;
 
 }

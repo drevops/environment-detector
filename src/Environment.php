@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector;
 
+use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 use DrevOps\EnvironmentDetector\Providers\ProviderInterface;
 
 /**
@@ -99,6 +100,16 @@ class Environment {
   protected static array $providers = [];
 
   /**
+   * The "active" context. Only one context can be active at a time.
+   */
+  protected static ?ContextInterface $context = NULL;
+
+  /**
+   * The list of registered contexts.
+   */
+  protected static array $contexts = [];
+
+  /**
    * The override callback to change the environment type.
    */
   protected static mixed $override = NULL;
@@ -109,6 +120,7 @@ class Environment {
 
   private function __clone() {
   }
+
   // @codeCoverageIgnoreEnd
 
   public static function isLocal(): bool {
@@ -228,10 +240,11 @@ class Environment {
       }
 
       if (empty(static::$providers)) {
-        // We want to throw an exception if No environment providers were registered rather
-        // than relying on a "default" provider, as this is a sign of a
-        // severe misconfiguration, and we want to hard-fail the application.
-        // This is a safer approach that resolving to an incorrect environment
+        // We want to throw an exception if No environment providers were
+        // registered rather than relying on a "default" provider, as this is a
+        // sign of a severe misconfiguration, and we want to hard-fail the
+        // application.
+        // This is a safer approach than resolving to an incorrect environment
         // type and silently leading to unexpected behavior within the
         // application.
         throw new \RuntimeException('No environment providers were registered');
@@ -282,6 +295,109 @@ class Environment {
   }
 
   /**
+   * Apply the active context to the provided data.
+   *
+   * @code
+   * Environment::applyContext($data1, $data2, $data3, $data4);
+   * @endcode
+   *
+   * @param mixed $data
+   *   The data to apply the context to.
+   */
+  public static function applyContext(?array &$data = NULL): void {
+    $context = static::context($data);
+    if ($context instanceof ContextInterface) {
+      static::provider()->applyContext($context, $data);
+    }
+  }
+
+  /**
+   * Get the active context.
+   *
+   * @return ContextInterface
+   *   The active context.
+   */
+  public static function context(?array $data = NULL): ?ContextInterface {
+    if (!static::$context instanceof ContextInterface) {
+      // Collect all active contexts.
+      $active = array_filter(static::contexts(), function (ContextInterface $context) use ($data): bool {
+        return $context->active($data);
+      });
+
+      if (count($active) > 1) {
+        throw new \Exception('Multiple active contexts detected');
+      }
+
+      static::$context = array_shift($active);
+    }
+
+    return static::$context;
+  }
+
+  /**
+   * Get the list of registered contexts.
+   *
+   * @param array<int|string,string> $dirs
+   *   An array of directories to scan for context classes. This paackage's
+   *   default contexts are registered by default.
+   *
+   * @return \DrevOps\EnvironmentDetector\Contexts\ContextInterface[]
+   *   An array of registered contexts.
+   * @throws \RuntimeException
+   *   If no environment contexts were registered.
+   */
+  public static function contexts(array $dirs = []): array {
+    if (!static::$contexts) {
+      $dirs = array_merge(['default' => __DIR__ . '/Contexts'], $dirs);
+
+      foreach ($dirs as $dir) {
+        if (!is_dir($dir)) {
+          continue;
+        }
+        $files = array_diff(scandir($dir), ['.', '..']);
+        foreach ($files as $file) {
+          $class = 'DrevOps\\EnvironmentDetector\\Contexts\\' . pathinfo($file, PATHINFO_FILENAME);
+          if (class_exists($class) && in_array(ContextInterface::class, class_implements($class)) && !(new \ReflectionClass($class))->isAbstract()) {
+            static::addContext(new $class());
+          }
+        }
+      }
+
+      if (empty(static::$contexts)) {
+        // We want to throw an exception if no environment contexts were
+        // registered rather than relying on a "default" context, as this is a
+        // sign of a severe misconfiguration, and we want to hard-fail the
+        // application.
+        // This is a safer approach than resolving to an incorrect context
+        // and silently leading to unexpected behavior within the application.
+        throw new \RuntimeException('No contexts were registered');
+      }
+    }
+
+    return static::$contexts;
+  }
+
+  /**
+   * Add a custom context.
+   *
+   * @param ContextInterface $context
+   *   The context to add.
+   *
+   * @throws \InvalidArgumentException
+   *   If a context with the same ID is already registered.
+   */
+  public static function addContext(ContextInterface $context): void {
+    foreach (static::$contexts as $existing) {
+      if ($existing->id() === $context->id()) {
+        throw new \InvalidArgumentException(sprintf('Context with ID "%s" is already registered', $context->id()));
+      }
+    }
+
+    static::$contexts[] = $context;
+    static::$context = NULL;
+  }
+
+  /**
    * Reset the detected environment type.
    *
    * @param bool $all
@@ -290,11 +406,13 @@ class Environment {
   public static function reset(bool $all = TRUE): void {
     static::$type = NULL;
     static::$provider = NULL;
+    static::$context = NULL;
     static::$override = NULL;
     static::$fallback = self::DEVELOPMENT;
 
     if ($all) {
       static::$providers = [];
+      static::$contexts = [];
     }
   }
 

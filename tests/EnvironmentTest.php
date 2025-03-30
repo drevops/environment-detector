@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Tests;
 
+use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 use DrevOps\EnvironmentDetector\Environment;
 use DrevOps\EnvironmentDetector\Providers\ProviderInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -108,28 +109,13 @@ class EnvironmentTest extends TestCase {
     $this->assertSame('dev', Environment::fallback());
   }
 
-  protected function mockProvider(string|callable|null $type, string $id = 'mock'): ProviderInterface {
-    $mock = $this->createMock(ProviderInterface::class);
-    $mock->method('active')->willReturn(TRUE);
-
-    if (is_callable($type)) {
-      $mock->method('type')->willReturnCallback($type);
-    }
-    else {
-      $mock->method('type')->willReturn($type);
-    }
-
-    $mock->method('id')->willReturn($id);
-    return $mock;
-  }
-
   public function testDuplicatedProviders(): void {
     $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('Provider with ID "mock" is already registered');
+    $this->expectExceptionMessage('Provider with ID "mocked_provider" is already registered');
 
     Environment::reset();
-    Environment::addProvider($this->mockProvider('mock'));
-    Environment::addProvider($this->mockProvider('mock'));
+    Environment::addProvider($this->mockProvider('mocked_provider'));
+    Environment::addProvider($this->mockProvider('mocked_provider'));
   }
 
   public function testEnvironmentIsTypes(): void {
@@ -163,6 +149,103 @@ class EnvironmentTest extends TestCase {
     $this->expectException(\Error::class);
     // @phpstan-ignore-next-line
     new Environment();
+  }
+
+  public function testNoContexts(): void {
+    $this->expectException(\RuntimeException::class);
+    $this->expectExceptionMessage('No contexts were registered');
+
+    Environment::reset();
+    Environment::contexts(['default' => 'non-exiting-dir']);
+  }
+
+  public function testContextGeneric(): void {
+    Environment::reset();
+
+    $provider = $this->mockProvider(Environment::DEVELOPMENT);
+
+    // Override the applyContext method to add some processing. PHPUnit does not
+    // allow to mock the dynamic applyContext<Name> method.
+    // This callback will be applied after the context is applied, so this
+    // will run after the activation callback in the context mock below.
+    // @phpstan-ignore-next-line
+    $provider->method('applyContext')->willReturnCallback(function (ContextInterface $context, ?array &$data = NULL): void {
+      $arg1 = &$data['arg1'];
+      $arg2 = &$data['arg2'];
+
+      if (is_array($arg1) && is_array($arg2)) {
+        $arg1['key2'] = 'value2';
+        $arg2['key2'] = 'value2';
+      }
+    });
+    Environment::addProvider($provider);
+
+    // Add a context that will activate only if both arg1 and arg2 are arrays.
+    Environment::addContext($this->mockContext(function (?array $data = NULL): bool {
+      $arg1 = $data['arg1'] ?? [];
+      $arg2 = $data['arg2'] ?? [];
+
+      if (is_array($arg1) && is_array($arg2)) {
+        return !empty($arg1['key1']) && !empty($arg2['key1']);
+      }
+
+      return FALSE;
+    }));
+
+    Environment::applyContext();
+    $this->assertEquals(
+      [],
+      [],
+      'Context is not applied when no data is passed'
+    );
+
+    $data = ['arg1' => [], 'arg2' => []];
+    Environment::applyContext($data);
+    $this->assertEquals(
+      ['arg1' => [], 'arg2' => []],
+      $data,
+      'Context is not applied'
+    );
+
+    $data = ['arg1' => ['key1' => 'value1'], 'arg2' => ['key1' => 'value1']];
+    Environment::applyContext($data);
+    $this->assertEquals(
+      ['arg1' => ['key1' => 'value1', 'key2' => 'value2'], 'arg2' => ['key1' => 'value1', 'key2' => 'value2']],
+      $data,
+      'Context is applied'
+    );
+  }
+
+  protected function mockProvider(string|callable|null $type, string $id = 'mocked_provider'): ProviderInterface {
+    $mock = $this->createMock(ProviderInterface::class);
+    $mock->method('active')->willReturn(TRUE);
+
+    if (is_callable($type)) {
+      $mock->method('type')->willReturnCallback($type);
+    }
+    else {
+      $mock->method('type')->willReturn($type);
+    }
+
+    $mock->method('id')->willReturn($id);
+
+    return $mock;
+  }
+
+  protected function mockContext(string|callable|null $activate, string $id = 'mocked_context'): ContextInterface {
+
+    $mock = $this->createMock(ContextInterface::class);
+
+    if (is_callable($activate)) {
+      $mock->method('active')->willReturnCallback($activate);
+    }
+    else {
+      $mock->method('active')->willReturn($activate);
+    }
+
+    $mock->method('id')->willReturn($id);
+
+    return $mock;
   }
 
 }
