@@ -28,7 +28,7 @@ class CircleCi extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  protected static function envPrefixes(): array {
+  protected function envPrefixes(): array {
     return ['CIRCLECI', 'CIRCLE_'];
   }
 

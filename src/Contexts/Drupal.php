@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Contexts;
 
+use DrevOps\EnvironmentDetector\Environment;
+
 /**
  * Drupal context.
  *
@@ -26,16 +28,20 @@ class Drupal extends AbstractContext {
   /**
    * {@inheritdoc}
    */
-  public function active(?array $data = NULL): bool {
-    return
-      is_array($data)
-      && isset($data['settings'])
-      && isset($data['config'])
-      && (
-        !empty($data['settings']['hash_salt'])
-        ||
-        !empty($data['config']['system.site']['uuid'])
-      );
+  public function active(): bool {
+    global $settings;
+    global $config;
+
+    return !empty($settings['hash_salt']) || !empty($config['system.site']['uuid']);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  #[\Override]
+  public function contextualize(): void {
+    global $settings;
+    $settings['environment'] = Environment::type();
   }
 
 }

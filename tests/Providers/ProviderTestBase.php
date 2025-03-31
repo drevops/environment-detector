@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace DrevOps\EnvironmentDetector\Tests\Providers;
 
 use DrevOps\EnvironmentDetector\Environment;
-use DrevOps\EnvironmentDetector\Tests\EnvTrait;
+use DrevOps\EnvironmentDetector\Tests\TestBase;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\TestCase;
 
-abstract class ProviderTestBase extends TestCase {
-
-  use EnvTrait;
+abstract class ProviderTestBase extends TestBase {
 
   /**
    * The provider ID discovered from the test class name.
@@ -21,24 +18,12 @@ abstract class ProviderTestBase extends TestCase {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   protected function setUp(): void {
+    parent::setUp();
+
     // Get the provider ID from the test class name.
     $this->providerId = strtolower(str_replace('Test', '', (new \ReflectionClass($this))->getShortName()));
-    // Unset all environment variables that might be set by the environment
-    // where these tests are running.
-    static::envUnsetPrefix('GITHUB_');
-    static::envUnsetPrefix('DOCKER_');
-    static::envUnsetPrefix('RUNNER_');
-    static::envUnsetPrefix('CI');
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function tearDown(): void {
-    parent::tearDown();
-    static::envReset();
-    Environment::reset();
   }
 
   #[DataProvider('dataProviderActive')]
@@ -46,11 +31,11 @@ abstract class ProviderTestBase extends TestCase {
     $before();
 
     if ($expect_equals) {
-      $this->assertEquals($this->providerId, Environment::provider()?->id());
-      $this->assertNotEmpty(Environment::provider()?->label() ?? '');
+      $this->assertEquals($this->providerId, Environment::provider()?->id(), sprintf('Provider ID is %s', $this->providerId));
+      $this->assertNotEmpty(Environment::provider()?->label() ?? '', 'Provider label is not empty');
     }
     else {
-      $this->assertNotEquals($this->providerId, Environment::provider()?->id());
+      $this->assertNotEquals($this->providerId, Environment::provider()?->id(), sprintf('Provider ID is not %s', $this->providerId));
     }
 
     if ($after !== NULL) {

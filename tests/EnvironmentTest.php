@@ -4,20 +4,114 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Tests;
 
+use DrevOps\EnvironmentDetector\Contexts\AbstractContext;
 use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 use DrevOps\EnvironmentDetector\Environment;
+use DrevOps\EnvironmentDetector\Providers\AbstractProvider;
 use DrevOps\EnvironmentDetector\Providers\ProviderInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
 
 #[CoversClass(Environment::class)]
-class EnvironmentTest extends TestCase {
+#[CoversClass(AbstractProvider::class)]
+#[CoversClass(AbstractContext::class)]
+class EnvironmentTest extends TestBase {
 
-  use EnvTrait;
+  public function testInitDefault(): void {
+    Environment::addProvider($this->mockProvider(Environment::STAGE, TRUE, function (): void {
+      static::envSet('TEST_VAR_PROVIDER', 'test_val_provider1');
+    }, id: 'provider1'));
+    Environment::addProvider($this->mockProvider(Environment::STAGE, FALSE, function (): void {
+      static::envSet('TEST_VAR_PROVIDER', 'test_val_provider2');
+    }, id: 'provider2'));
+
+    // Context will set an environment variable.
+    Environment::addContext($this->mockContext(TRUE, 'mocked_context', function (): void {
+      static::envSet('TEST_VAR_CONTEXT', 'test_val_context');
+    }));
+
+    $this->assertEmpty(static::envGet('TEST_VAR_CONTEXT'), 'Context variable is not set');
+    $this->assertEmpty(static::envGet('TEST_VAR_PROVIDER'), 'Provider context variable is not set');
+
+    Environment::init();
+
+    $this->assertEquals(Environment::STAGE, static::envGet('ENVIRONMENT_TYPE'), 'Environment type is set via ENVIRONMENT_TYPE env variable');
+    $this->assertEquals(Environment::STAGE, Environment::type(), 'Environment type is set within the type() method');
+    $this->assertEquals('test_val_context', static::envGet('TEST_VAR_CONTEXT'), 'Context is applied');
+    $this->assertEquals('test_val_provider1', static::envGet('TEST_VAR_PROVIDER'), 'Provider context is applied');
+  }
+
+  public function testInitTypeFromEnvVar(): void {
+    // Provider will return the STAGE environment type.
+    Environment::addProvider($this->mockProvider(Environment::STAGE, contextualize: function (): void {
+      static::envSet('TEST_VAR_PROVIDER', 'test_val_provider');
+    }));
+
+    // Context will set an environment variable.
+    Environment::addContext($this->mockContext(TRUE, 'mocked_context', function (): void {
+      static::envSet('TEST_VAR_CONTEXT', 'test_val_context');
+    }));
+
+    $this->assertEmpty(static::envGet('TEST_VAR_CONTEXT'), 'Context variable is not set');
+    $this->assertEmpty(static::envGet('TEST_VAR_PROVIDER'), 'Provider context variable is not set');
+
+    // Set the environment type via an environment variable. This should
+    // override the environment type discovered by the provider.
+    static::envSet('ENVIRONMENT_TYPE', Environment::PREVIEW);
+
+    Environment::init();
+
+    $this->assertEquals(Environment::PREVIEW, static::envGet('ENVIRONMENT_TYPE'), 'Environment type is set via ENVIRONMENT_TYPE env variable');
+    $this->assertEquals(Environment::PREVIEW, Environment::type(), 'Environment type is set within the type() method');
+    $this->assertEquals('test_val_context', static::envGet('TEST_VAR_CONTEXT'), 'Context is applied');
+    // This is the main assertion: although we did not perform a provider-based
+    // type detection, the provider context was still applied.
+    $this->assertEquals('test_val_provider', static::envGet('TEST_VAR_PROVIDER'), 'Provider context is applied');
+  }
+
+  public function testIs(): void {
+    Environment::reset();
+    Environment::addProvider($this->mockProvider('custom'));
+
+    $this->assertSame('custom', Environment::type());
+    $this->assertTrue(Environment::is('custom'));
+  }
+
+  public function testIsTypes(): void {
+    Environment::reset();
+    static::envUnset('ENVIRONMENT_TYPE');
+    Environment::addProvider($this->mockProvider(Environment::LOCAL));
+    $this->assertEquals(Environment::LOCAL, Environment::isLocal());
+    $this->assertEquals(Environment::LOCAL, static::envGet('ENVIRONMENT_TYPE'));
+    $this->assertEquals(Environment::LOCAL, Environment::is(Environment::LOCAL));
+
+    Environment::reset();
+    static::envUnset('ENVIRONMENT_TYPE');
+    Environment::addProvider($this->mockProvider(Environment::CI));
+    $this->assertEquals(Environment::CI, Environment::isCi());
+    $this->assertEquals(Environment::CI, Environment::is(Environment::CI));
+
+    Environment::reset();
+    static::envUnset('ENVIRONMENT_TYPE');
+    Environment::addProvider($this->mockProvider(Environment::DEVELOPMENT));
+    $this->assertEquals(Environment::DEVELOPMENT, Environment::isDev());
+    $this->assertEquals(Environment::DEVELOPMENT, Environment::is(Environment::DEVELOPMENT));
+
+    Environment::reset();
+    static::envUnset('ENVIRONMENT_TYPE');
+    Environment::addProvider($this->mockProvider(Environment::STAGE));
+    $this->assertEquals(Environment::STAGE, Environment::isStage());
+    $this->assertEquals(Environment::STAGE, Environment::is(Environment::STAGE));
+
+    Environment::reset();
+    static::envUnset('ENVIRONMENT_TYPE');
+    Environment::addProvider($this->mockProvider(Environment::PRODUCTION));
+    $this->assertEquals(Environment::PRODUCTION, Environment::isProd());
+    $this->assertEquals(Environment::PRODUCTION, Environment::is(Environment::PRODUCTION));
+  }
 
   public function testOverrideCallbackChangesEnvironmentType(): void {
     Environment::reset();
-    Environment::addProvider($this->mockProvider(Environment::DEVELOPMENT));
+    Environment::addProvider($this->mockProvider());
 
     Environment::setOverride(function (ProviderInterface $provider, string $original): string {
       return Environment::PRODUCTION;
@@ -29,22 +123,25 @@ class EnvironmentTest extends TestCase {
   public function testOverrideCallbackChangesEnvironmentTypeBasedOnLogic(): void {
     Environment::reset();
     Environment::addProvider($this->mockProvider(function () {
-      return getenv('ENVIRONMENT_TYPE') ?: Environment::DEVELOPMENT;
+      return getenv('TEST_ENVIRONMENT_TYPE') ?: Environment::DEVELOPMENT;
     }));
 
     $this->assertEquals(Environment::DEVELOPMENT, Environment::type(), 'Default environment type is DEV');
 
     Environment::reset(FALSE);
-    static::envSet('ENVIRONMENT_TYPE', Environment::STAGE);
+    static::envUnset('ENVIRONMENT_TYPE');
+    static::envSet('TEST_ENVIRONMENT_TYPE', Environment::STAGE);
     $this->assertEquals(Environment::STAGE, Environment::type(), 'Type is taken from ENVIRONMENT_TYPE env variable');
 
     Environment::reset(FALSE);
+    static::envUnset('ENVIRONMENT_TYPE');
     Environment::setOverride(function (ProviderInterface $provider, string $original): string {
       return Environment::PRODUCTION;
     });
     $this->assertEquals(Environment::PRODUCTION, Environment::type(), 'Type is overridden by callback');
 
     Environment::reset(FALSE);
+    static::envUnset('ENVIRONMENT_TYPE');
     Environment::setOverride(function (ProviderInterface $provider, string $original): string {
       return $original === Environment::STAGE ? Environment::CI : $original;
     });
@@ -54,20 +151,21 @@ class EnvironmentTest extends TestCase {
   public function testOverrideCallbackNotCallable(): void {
     $this->expectException(\InvalidArgumentException::class);
     Environment::reset();
-    $provider = $this->mockProvider(Environment::DEVELOPMENT);
+    $provider = $this->mockProvider();
     Environment::addProvider($provider);
     Environment::setOverride([$provider, 'not_callable']);
   }
 
-  public function testIs(): void {
+  public function testFallbackTypeCanBeChanged(): void {
     Environment::reset();
-    Environment::addProvider($this->mockProvider('custom'));
+    Environment::setFallback(Environment::STAGE);
+    Environment::addProvider($this->mockProvider(NULL));
 
-    $this->assertSame('custom', Environment::type());
-    $this->assertTrue(Environment::is('custom'));
+    $this->assertSame(Environment::STAGE, Environment::type());
+    $this->assertSame(Environment::STAGE, Environment::fallback());
   }
 
-  public function testNoProviders(): void {
+  public function testProvidersAbsent(): void {
     $this->expectException(\RuntimeException::class);
     $this->expectExceptionMessage('No environment providers were registered');
 
@@ -75,83 +173,100 @@ class EnvironmentTest extends TestCase {
     Environment::providers(['default' => 'non-exiting-dir']);
   }
 
-  public function testProviderOnlyOneActive(): void {
+  public function testProvidersNoDuplicated(): void {
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage('Provider with ID "provider1" is already registered');
+
+    Environment::reset();
+    Environment::addProvider($this->mockProvider(id: 'provider1'));
+    Environment::addProvider($this->mockProvider(id: 'provider1'));
+  }
+
+  public function testProviderActiveOnlyOne(): void {
     $this->expectException(\Exception::class);
     $this->expectExceptionMessage('Multiple active environment providers detected');
 
     Environment::reset();
-    Environment::addProvider($this->mockProvider('dev', 'provider1'));
-    Environment::addProvider($this->mockProvider('dev', 'provider2'));
+    Environment::addProvider($this->mockProvider(type: 'provider1', id: 'provider1'));
+    Environment::addProvider($this->mockProvider(type: 'provider2', id: 'provider2'));
 
     $this->assertSame('dev', Environment::type());
   }
 
-  public function testAddProviderResetsCache(): void {
+  public function testProviderDataPrefixes(): void {
+    static::envSetMultiple([
+      'TEST_VAR_PROVIDER' => 'test_val_provider',
+    ]);
+    Environment::addProvider($this->mockProvider(type: 'provider1', env_prefixes: function (): array {
+      return ['TEST_VAR_'];
+    }));
+
+    Environment::init();
+    $this->assertEquals(['TEST_VAR_PROVIDER' => 'test_val_provider'], Environment::provider()?->data());
+  }
+
+  public function testProviderDataEmptyPrefixes(): void {
+    static::envSetMultiple([
+      'TEST_VAR_PROVIDER' => 'test_val_provider',
+    ]);
+    Environment::addProvider($this->mockProvider(type: 'provider1', env_prefixes: function (): array {
+      return [];
+    }));
+
+    Environment::init();
+    $this->assertEquals([], Environment::provider()?->data());
+  }
+
+  public function testProviderAdditionResetsCache(): void {
     $this->expectException(\Exception::class);
     $this->expectExceptionMessage('Multiple active environment providers detected');
 
     Environment::reset();
-    Environment::addProvider($this->mockProvider('dev', 'provider1'));
-    $this->assertSame('dev', Environment::type());
+    Environment::addProvider($this->mockProvider(Environment::STAGE, id: 'provider1'));
+    $this->assertSame(Environment::STAGE, Environment::type());
+
+    static::envUnset('ENVIRONMENT_TYPE');
 
     // Add another provider, which should reset the cache and trigger an
     // exception because there are multiple active providers.
-    Environment::addProvider($this->mockProvider('dev', 'provider2'));
-    $this->assertSame('dev', Environment::type());
+    Environment::addProvider($this->mockProvider(Environment::STAGE, id: 'provider2'));
+    $this->assertSame(Environment::STAGE, Environment::type());
   }
 
-  public function testFallbackTypeCanBeChanged(): void {
+  public function testContextGeneric(): void {
     Environment::reset();
-    Environment::setFallback('dev');
-    Environment::addProvider($this->mockProvider(NULL));
 
-    $this->assertSame('dev', Environment::type());
-    $this->assertSame('dev', Environment::fallback());
+    Environment::addProvider($this->mockProvider(contextualize: function (ContextInterface $context): void {
+      global $arg1;
+      global $arg2;
+
+      if (is_array($arg1) && is_array($arg2)) {
+        $arg1['key2'] = 'value2';
+        $arg2['key2'] = 'value2';
+      }
+    }));
+
+    Environment::addContext($this->mockContext(function (): bool {
+      global $arg1;
+      global $arg2;
+      return !empty($arg1['key1']) && !empty($arg2['key1']);
+    }));
+
+    global $arg1;
+    global $arg2;
+
+    Environment::init();
+    $this->assertEquals(NULL, $arg1, 'Context is not applied to arg1');
+    $this->assertEquals(NULL, $arg2, 'Context is not applied to arg2');
+
+    $arg1 = ['key1' => 'value1'];
+    $arg2 = ['key1' => 'value1'];
+    Environment::init();
+    $this->assertEquals(['key1' => 'value1', 'key2' => 'value2'], $arg1, 'Context is applied to arg1');
+    $this->assertEquals(['key1' => 'value1', 'key2' => 'value2'], $arg2, 'Context is applied to arg2');
   }
 
-  public function testDuplicatedProviders(): void {
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('Provider with ID "mocked_provider" is already registered');
-
-    Environment::reset();
-    Environment::addProvider($this->mockProvider('mocked_provider'));
-    Environment::addProvider($this->mockProvider('mocked_provider'));
-  }
-
-  public function testEnvironmentIsTypes(): void {
-    Environment::reset();
-    Environment::addProvider($this->mockProvider(Environment::LOCAL));
-    $this->assertEquals(Environment::LOCAL, Environment::isLocal());
-    $this->assertEquals(Environment::LOCAL, Environment::is(Environment::LOCAL));
-
-    Environment::reset();
-    Environment::addProvider($this->mockProvider(Environment::CI));
-    $this->assertEquals(Environment::CI, Environment::isCi());
-    $this->assertEquals(Environment::CI, Environment::is(Environment::CI));
-
-    Environment::reset();
-    Environment::addProvider($this->mockProvider(Environment::DEVELOPMENT));
-    $this->assertEquals(Environment::DEVELOPMENT, Environment::isDev());
-    $this->assertEquals(Environment::DEVELOPMENT, Environment::is(Environment::DEVELOPMENT));
-
-    Environment::reset();
-    Environment::addProvider($this->mockProvider(Environment::STAGE));
-    $this->assertEquals(Environment::STAGE, Environment::isStage());
-    $this->assertEquals(Environment::STAGE, Environment::is(Environment::STAGE));
-
-    Environment::reset();
-    Environment::addProvider($this->mockProvider(Environment::PRODUCTION));
-    $this->assertEquals(Environment::PRODUCTION, Environment::isProd());
-    $this->assertEquals(Environment::PRODUCTION, Environment::is(Environment::PRODUCTION));
-  }
-
-  public function testCannotInstantiateConstructor(): void {
-    $this->expectException(\Error::class);
-    // @phpstan-ignore-next-line
-    new Environment();
-  }
-
-  public function testNoContexts(): void {
+  public function testContextsAbsent(): void {
     $this->expectException(\RuntimeException::class);
     $this->expectExceptionMessage('No contexts were registered');
 
@@ -159,93 +274,34 @@ class EnvironmentTest extends TestCase {
     Environment::contexts(['default' => 'non-exiting-dir']);
   }
 
-  public function testContextGeneric(): void {
+  public function testContextsNoDuplicated(): void {
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage('Context with ID "context1" is already registered');
+
     Environment::reset();
+    Environment::addProvider($this->mockProvider());
+    Environment::addContext($this->mockContext(TRUE, 'context1'));
+    Environment::addContext($this->mockContext(TRUE, 'context1'));
 
-    $provider = $this->mockProvider(Environment::DEVELOPMENT);
+    Environment::init();
+  }
 
-    // Override the applyContext method to add some processing. PHPUnit does not
-    // allow to mock the dynamic applyContext<Name> method.
-    // This callback will be applied after the context is applied, so this
-    // will run after the activation callback in the context mock below.
+  public function testContextActiveOnlyOne(): void {
+    $this->expectException(\Exception::class);
+    $this->expectExceptionMessage('Multiple active contexts detected');
+
+    Environment::reset();
+    Environment::addProvider($this->mockProvider());
+    Environment::addContext($this->mockContext(id: 'context1'));
+    Environment::addContext($this->mockContext(id: 'context2'));
+
+    Environment::init();
+  }
+
+  public function testCannotInstantiateConstructor(): void {
+    $this->expectException(\Error::class);
     // @phpstan-ignore-next-line
-    $provider->method('applyContext')->willReturnCallback(function (ContextInterface $context, ?array &$data = NULL): void {
-      $arg1 = &$data['arg1'];
-      $arg2 = &$data['arg2'];
-
-      if (is_array($arg1) && is_array($arg2)) {
-        $arg1['key2'] = 'value2';
-        $arg2['key2'] = 'value2';
-      }
-    });
-    Environment::addProvider($provider);
-
-    // Add a context that will activate only if both arg1 and arg2 are arrays.
-    Environment::addContext($this->mockContext(function (?array $data = NULL): bool {
-      $arg1 = $data['arg1'] ?? [];
-      $arg2 = $data['arg2'] ?? [];
-
-      if (is_array($arg1) && is_array($arg2)) {
-        return !empty($arg1['key1']) && !empty($arg2['key1']);
-      }
-
-      return FALSE;
-    }));
-
-    Environment::applyContext();
-    $this->assertEquals(
-      [],
-      [],
-      'Context is not applied when no data is passed'
-    );
-
-    $data = ['arg1' => [], 'arg2' => []];
-    Environment::applyContext($data);
-    $this->assertEquals(
-      ['arg1' => [], 'arg2' => []],
-      $data,
-      'Context is not applied'
-    );
-
-    $data = ['arg1' => ['key1' => 'value1'], 'arg2' => ['key1' => 'value1']];
-    Environment::applyContext($data);
-    $this->assertEquals(
-      ['arg1' => ['key1' => 'value1', 'key2' => 'value2'], 'arg2' => ['key1' => 'value1', 'key2' => 'value2']],
-      $data,
-      'Context is applied'
-    );
-  }
-
-  protected function mockProvider(string|callable|null $type, string $id = 'mocked_provider'): ProviderInterface {
-    $mock = $this->createMock(ProviderInterface::class);
-    $mock->method('active')->willReturn(TRUE);
-
-    if (is_callable($type)) {
-      $mock->method('type')->willReturnCallback($type);
-    }
-    else {
-      $mock->method('type')->willReturn($type);
-    }
-
-    $mock->method('id')->willReturn($id);
-
-    return $mock;
-  }
-
-  protected function mockContext(string|callable|null $activate, string $id = 'mocked_context'): ContextInterface {
-
-    $mock = $this->createMock(ContextInterface::class);
-
-    if (is_callable($activate)) {
-      $mock->method('active')->willReturnCallback($activate);
-    }
-    else {
-      $mock->method('active')->willReturn($activate);
-    }
-
-    $mock->method('id')->willReturn($id);
-
-    return $mock;
+    new Environment();
   }
 
 }

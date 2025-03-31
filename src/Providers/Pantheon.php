@@ -28,7 +28,7 @@ class Pantheon extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  protected static function envPrefixes(): array {
+  protected function envPrefixes(): array {
     return ['PANTHEON_', 'TERMINUS_'];
   }
 

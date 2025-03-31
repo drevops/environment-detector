@@ -37,4 +37,19 @@ abstract class AbstractContext implements ContextInterface {
     return static::LABEL;
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  // phpcs:disable DrupalPractice.Commenting.CommentEmptyLine.SpacingAfter
+  // phpcs:disable Drupal.Commenting.FunctionComment.WrongStyle
+  // phpcs:disable Squiz.WhiteSpace.FunctionSpacing.After
+  // @codeCoverageIgnoreStart
+  public function contextualize(): void {
+    // Noop.
+  }
+  // @codeCoverageIgnoreEnd
+  // phpcs:enable DrupalPractice.Commenting.CommentEmptyLine.SpacingAfter
+  // phpcs:enable Drupal.Commenting.FunctionComment.WrongStyle
+  // phpcs:enable Squiz.WhiteSpace.FunctionSpacing.After
+
 }

@@ -28,7 +28,7 @@ class Ddev extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  protected static function envPrefixes(): array {
+  protected function envPrefixes(): array {
     return ['DDEV_', 'IS_DDEV_PROJECT'];
   }
 

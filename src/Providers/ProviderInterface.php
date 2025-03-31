@@ -6,6 +6,13 @@ namespace DrevOps\EnvironmentDetector\Providers;
 
 use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 
+/**
+ * Provider interface.
+ *
+ * All providers should implement this interface.
+ *
+ * @package DrevOps\EnvironmentDetector\Providers
+ */
 interface ProviderInterface {
 
   /**
@@ -49,6 +56,12 @@ interface ProviderInterface {
    */
   public function data(): array;
 
-  public function applyContext(ContextInterface $context, ?array &$data = NULL): void;
+  /**
+   * Apply the context.
+   *
+   * @param \DrevOps\EnvironmentDetector\Contexts\ContextInterface $context
+   *   The context to apply.
+   */
+  public function contextualize(ContextInterface $context): void;
 
 }

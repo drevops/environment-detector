@@ -3,7 +3,9 @@
     <description>Custom PHPCS standard.</description>
 
     <!-- Using Drupal coding standard as a base-fix. -->
-    <rule ref="Drupal"/>
+    <rule ref="Drupal">
+        <exclude name="Drupal.NamingConventions.ValidGlobal.GlobalUnderScore"/>
+    </rule>
     <!-- Checks that the strict_types has been declared. -->
     <rule ref="Generic.PHP.RequireStrictTypes"/>
 
@@ -13,6 +15,7 @@
     <arg value="p"/>
     <arg name="colors"/>
 
+    <file>src</file>
     <file>tests</file>
 
     <!-- Allow long array lines in tests. -->

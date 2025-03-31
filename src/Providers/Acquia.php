@@ -28,7 +28,7 @@ class Acquia extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  protected static function envPrefixes(): array {
+  protected function envPrefixes(): array {
     return ['AH_'];
   }
 
