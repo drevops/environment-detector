@@ -44,7 +44,7 @@ interface ProviderInterface {
    *
    * @return string|null
    *   The environment type or NULL if unable to resolve. Do not return the
-   *   default environment type - this is decided outside of the provider.
+   *   default environment type - this is decided outside the provider.
    */
   public function type(): ?string;
 
