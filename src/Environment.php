@@ -345,7 +345,7 @@ class Environment {
    * Get the list of registered providers.
    *
    * @param array<int|string,string> $dirs
-   *   An array of directories to scan for provider classes. This paackage's
+   *   An array of directories to scan for provider classes. This package's
    *   default providers are registered by default.
    *
    * @return \DrevOps\EnvironmentDetector\Providers\ProviderInterface[]
@@ -372,7 +372,7 @@ class Environment {
       }
 
       if (empty(static::$providers)) {
-        // We want to throw an exception if No environment providers were
+        // We want to throw an exception if no environment providers were
         // registered rather than relying on a "default" provider, as this is a
         // sign of a severe misconfiguration, and we want to hard-fail the
         // application.
@@ -452,7 +452,7 @@ class Environment {
    * Get the list of registered contexts.
    *
    * @param array<int|string,string> $dirs
-   *   An array of directories to scan for context classes. This paackage's
+   *   An array of directories to scan for context classes. This package's
    *   default contexts are registered by default.
    *
    * @return \DrevOps\EnvironmentDetector\Contexts\ContextInterface[]

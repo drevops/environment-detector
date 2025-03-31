@@ -25,7 +25,7 @@ class GitHubActionsTest extends ProviderTestBase {
   public static function dataProviderActive(): array {
     return [
       [fn(): null => NULL, FALSE],
-      [fn() => static::envSet('GITHUB_WORKFLOW', 'worfklow_name'), TRUE],
+      [fn() => static::envSet('GITHUB_WORKFLOW', 'workflow_name'), TRUE],
     ];
   }
 
@@ -36,17 +36,17 @@ class GitHubActionsTest extends ProviderTestBase {
         NULL,
       ],
       [
-        fn() => static::envSet('GITHUB_WORKFLOW', 'worfklow_name'),
-        ['GITHUB_WORKFLOW' => 'worfklow_name'],
+        fn() => static::envSet('GITHUB_WORKFLOW', 'workflow_name'),
+        ['GITHUB_WORKFLOW' => 'workflow_name'],
       ],
       [
         function (): void {
-          static::envSet('GITHUB_WORKFLOW', 'worfklow_name');
+          static::envSet('GITHUB_WORKFLOW', 'workflow_name');
           static::envSet('GITHUB_WORKFLOW_REF', 'abc');
           static::envSet('OTHER_VAR', 'other_val');
         },
         [
-          'GITHUB_WORKFLOW' => 'worfklow_name',
+          'GITHUB_WORKFLOW' => 'workflow_name',
           'GITHUB_WORKFLOW_REF' => 'abc',
         ],
       ],
@@ -60,7 +60,7 @@ class GitHubActionsTest extends ProviderTestBase {
         NULL,
       ],
       [
-        fn() => static::envSet('GITHUB_WORKFLOW', 'worfklow_name'),
+        fn() => static::envSet('GITHUB_WORKFLOW', 'workflow_name'),
         Environment::CI,
         function ($test): void {
           $test->assertTrue(Environment::isCi());
