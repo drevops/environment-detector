@@ -36,16 +36,26 @@ The type detection is based on a three-part process:
 ## Features
 
 - Detects environment type: `local`, `ci`, `dev`, `preview`, `stage`, `prod`, or custom
-- Supports [Acquia](src/Providers/Acquia.php), [Lagoon](src/Providers/Lagoon.php),
-  [Platform.sh](src/Providers/PlatformSh.php), [Pantheon](src/Providers/Pantheon.php),
-  [Tugboat](src/Providers/Tugboat.php), [CircleCI](src/Providers/CircleCi.php),
-  [GitHub Actions](src/Providers/GitHubActions.php), [GitLab CI](src/Providers/GitLabCi.php),
-  [DDEV](src/Providers/Ddev.php), [Lando](src/Providers/Lando.php), [Docker](src/Providers/Docker.php)
+- Supports popular providers
 - Detects custom contexts: [Drupal](src/Contexts/Drupal.php)
 - Simple API to access environment and provider data
 - Allows adding a custom provider
 - Optional override for consumer-level customization of the existing matching
   logic
+
+## Supported providers
+
+- [Acquia](src/Providers/Acquia.php)
+- [Lagoon](src/Providers/Lagoon.php)
+- [Platform.sh](src/Providers/PlatformSh.php)
+- [Pantheon](src/Providers/Pantheon.php)
+- [Tugboat](src/Providers/Tugboat.php) 
+- [CircleCI](src/Providers/CircleCi.php)
+- [GitHub Actions](src/Providers/GitHubActions.php) 
+- [GitLab CI](src/Providers/GitLabCi.php)
+- [DDEV](src/Providers/Ddev.php)
+- [Lando](src/Providers/Lando.php) 
+- [Docker](src/Providers/Docker.php)
 
 ## Installation
 
