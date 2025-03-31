@@ -29,7 +29,7 @@ class Lagoon extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  protected static function envPrefixes(): array {
+  protected function envPrefixes(): array {
     return ['LAGOON_'];
   }
 
@@ -54,9 +54,9 @@ class Lagoon extends AbstractProvider {
       $type = Environment::DEVELOPMENT;
 
       // Try to identify production environment using a branch name for
-      // the cases when the Lagoon environment is not marked as 'production' yet.
-      // Note that `ENVIRONMENT_PRODUCTION_BRANCH` is a custom variable that should be
-      // set in the Lagoon project settings.
+      // the cases when the Lagoon environment is not marked as 'production'
+      // yet. Note that `ENVIRONMENT_PRODUCTION_BRANCH` is a custom variable
+      // that should be set in the Lagoon project settings.
       if (!empty(getenv('LAGOON_GIT_BRANCH')) && !empty(getenv('ENVIRONMENT_PRODUCTION_BRANCH')) && getenv('LAGOON_GIT_BRANCH') === getenv('ENVIRONMENT_PRODUCTION_BRANCH')) {
         $type = Environment::PRODUCTION;
       }
@@ -76,12 +76,8 @@ class Lagoon extends AbstractProvider {
   /**
    * Applies Drupal context.
    */
-  public function applyContextDrupal(?array &$data = NULL): void {
-    if (!is_array($data) || empty($data['settings'])) {
-      return;
-    }
-
-    $settings = &$data['settings'];
+  public static function contextualizeDrupal(): void {
+    global $settings;
 
     // Lagoon reverse proxy settings.
     $settings['reverse_proxy'] = TRUE;
@@ -101,7 +97,7 @@ class Lagoon extends AbstractProvider {
     $settings['trusted_host_patterns'][] = '^.+\.au\.amazee\.io$';
 
     // Lagoon routes.
-    $routes = $this->data()['LAGOON_ROUTES'] ?? [];
+    $routes = Environment::provider()->data()['LAGOON_ROUTES'] ?? [];
     if (!empty($routes)) {
       $patterns = str_replace(['.', 'https://', 'http://', ','], [
         '\.', '', '', '|',
@@ -111,4 +107,3 @@ class Lagoon extends AbstractProvider {
   }
 
 }
-

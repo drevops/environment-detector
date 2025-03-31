@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace DrevOps\EnvironmentDetector\Tests\Contexts;
 
 use DrevOps\EnvironmentDetector\Environment;
-use DrevOps\EnvironmentDetector\Tests\EnvTrait;
+use DrevOps\EnvironmentDetector\Tests\TestBase;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\TestCase;
 
-abstract class ContextTestBase extends TestCase {
-
-  use EnvTrait;
+abstract class ContextTestBase extends TestBase {
 
   /**
    * The context ID discovered from the test class name.
@@ -21,32 +18,25 @@ abstract class ContextTestBase extends TestCase {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   protected function setUp(): void {
+    parent::setUp();
+
     // Get the context ID from the test class name.
     $this->contextId = strtolower(str_replace('Test', '', (new \ReflectionClass($this))->getShortName()));
-    Environment::reset();
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function tearDown(): void {
-    parent::tearDown();
-    static::envReset();
-    Environment::reset();
   }
 
   #[DataProvider('dataProviderActive')]
   public function testActive(callable $before, bool $expect_equals, ?callable $after = NULL): void {
-    $data = $before();
+    $before();
 
     if ($expect_equals) {
       Environment::reset();
-      $this->assertEquals($this->contextId, Environment::context($data)?->id());
-      $this->assertNotEmpty(Environment::context()?->label() ?? '');
+      $this->assertEquals($this->contextId, Environment::context()?->id(), sprintf('Context ID is %s', $this->contextId));
+      $this->assertNotEmpty(Environment::context()?->label() ?? '', 'Context label is not empty');
     }
     else {
-      $this->assertNotEquals($this->contextId, Environment::context()?->id());
+      $this->assertNotEquals($this->contextId, Environment::context()?->id(), sprintf('Context ID is not %s', $this->contextId));
     }
 
     if ($after !== NULL) {
@@ -55,5 +45,19 @@ abstract class ContextTestBase extends TestCase {
   }
 
   abstract public static function dataProviderActive(): array;
+
+  #[DataProvider('dataProviderContextualize')]
+  public function testContextualize(callable $before, ?callable $after = NULL): void {
+    $before();
+
+    Environment::reset();
+    Environment::context()?->contextualize();
+
+    if ($after !== NULL) {
+      $after($this);
+    }
+  }
+
+  abstract public static function dataProviderContextualize(): array;
 
 }

@@ -28,7 +28,7 @@ abstract class AbstractProvider implements ProviderInterface {
   /**
    * Environment variables prefix. Providers should override this constant.
    */
-  abstract protected static function envPrefixes(): array;
+  abstract protected function envPrefixes(): array;
 
   /**
    * {@inheritdoc}
@@ -48,20 +48,30 @@ abstract class AbstractProvider implements ProviderInterface {
    * {@inheritdoc}
    */
   public function data(): array {
-    return
-      empty(static::envPrefixes())
+    return empty($this->envPrefixes())
         ? []
         : array_filter(getenv(), fn($key): bool => array_reduce(static::envPrefixes(), fn($carry, $prefix): bool => $carry || str_starts_with($key, $prefix), FALSE), ARRAY_FILTER_USE_KEY);
   }
 
-  public function applyContext(ContextInterface $context, ?array &$data = NULL): void {
-    $method = 'applyContext' . static::snakeToCamel($context->id());
-
+  /**
+   * {@inheritdoc}
+   */
+  public function contextualize(ContextInterface $context): void {
+    $method = 'contextualize' . static::snakeToCamel($context->id());
     if (method_exists($this, $method)) {
-      $this->$method($data);
+      $this->$method();
     }
   }
 
+  /**
+   * Convert a snake_case string to camelCase.
+   *
+   * @param string $string
+   *   The string to convert.
+   *
+   * @return string
+   *   The converted string.
+   */
   protected static function snakeToCamel(string $string): string {
     return str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $string)));
   }

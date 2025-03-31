@@ -179,48 +179,65 @@ class LagoonTest extends ProviderTestBase {
     return $data;
   }
 
-  #[DataProvider('dataProviderApplyContextDrupal')]
-  public function testApplyContextDrupal(callable $before, array $data, array $expected, ?callable $after = NULL): void {
+  #[DataProvider('dataProviderContextualizeDrupal')]
+  public function testContextualizeDrupal(callable $before, array $expected, ?callable $after = NULL): void {
     $before();
 
     static::envSet('LAGOON_KUBERNETES', 'myproject');
-    Environment::applyContext($data);
-    $this->assertEquals($expected, $data);
+    Environment::init();
+
+    global $settings;
+    global $config;
+
+    $this->assertEquals($expected['settings'], $settings);
+    $this->assertEquals($expected['config'], $config);
 
     if ($after !== NULL) {
       $after($this);
     }
   }
 
-  public static function dataProviderApplyContextDrupal(): array {
-    $default = ['settings' => ['hash_salt' => 'abc'], 'config' => []];
+  public static function dataProviderContextualizeDrupal(): array {
+    $default_settings = [
+      'environment' => Environment::DEVELOPMENT,
+      'hash_salt' => 'abc',
+    ];
+    $default_config = [];
 
     return [
       [
-        fn(): null => NULL,
-        $default,
-        array_merge_recursive([
-          'settings' => [
-            'reverse_proxy' => TRUE,
-            'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
-            'trusted_host_patterns' => [
-              '^nginx\-php$',
-              '^.+\.au\.amazee\.io$',
-            ],
-          ],
-          'config' => [],
-        ], $default),
+        function () use ($default_settings, $default_config): void {
+          global $settings;
+          global $config;
+          $settings = $default_settings;
+          $config = $default_config;
+        },
+        [
+          'settings' => array_merge_recursive(
+            [
+              'reverse_proxy' => TRUE,
+              'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
+              'trusted_host_patterns' => [
+                '^nginx\-php$',
+                '^.+\.au\.amazee\.io$',
+              ],
+            ] + $default_settings),
+          'config' => array_merge_recursive([], $default_config),
+        ],
       ],
 
       [
-        function (): void {
+        function () use ($default_settings, $default_config): void {
+          global $settings;
+          global $config;
+          $settings = $default_settings;
+          $config = $default_config;
           static::envSet('LAGOON_ROUTES', 'http://example1.com,https://example2.com');
           static::envSet('LAGOON_PROJECT', 'myproject');
           static::envSet('LAGOON_GIT_SAFE_BRANCH', 'develop');
         },
-        $default,
-        array_merge_recursive([
-          'settings' => [
+        [
+          'settings' => array_merge_recursive([
             'reverse_proxy' => TRUE,
             'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
             'cache_prefix' => 'myproject_develop',
@@ -229,19 +246,22 @@ class LagoonTest extends ProviderTestBase {
               '^.+\.au\.amazee\.io$',
               '^example1\.com|example2\.com$',
             ],
-          ],
-          'config' => [],
-        ], $default),
+          ], $default_settings),
+          'config' => array_merge_recursive([], $default_config),
+        ],
       ],
       [
-        function (): void {
+        function () use ($default_settings, $default_config): void {
+          global $settings;
+          global $config;
+          $settings = $default_settings;
+          $config = $default_config;
           static::envSet('LAGOON_ROUTES', 'http://example1.com,https://example2/com');
           static::envSet('LAGOON_PROJECT', 'myproject');
           static::envSet('ENVIRONMENT_PRODUCTION_BRANCH', 'master');
         },
-        $default,
-        array_merge_recursive([
-          'settings' => [
+        [
+          'settings' => array_merge_recursive([
             'reverse_proxy' => TRUE,
             'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
             'cache_prefix' => 'myproject_master',
@@ -250,9 +270,10 @@ class LagoonTest extends ProviderTestBase {
               '^.+\.au\.amazee\.io$',
               '^example1\.com|example2/com$',
             ],
-          ],
-          'config' => [],
-        ], $default),
+          ], $default_settings
+          ),
+          'config' => array_merge_recursive([], $default_config),
+        ],
       ],
     ];
   }

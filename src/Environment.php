@@ -12,7 +12,10 @@ use DrevOps\EnvironmentDetector\Providers\ProviderInterface;
  *
  * Detects the environment type based on the registered providers. This package
  * provides a set of built-in providers, but custom providers can be added as
- * well.
+ * well. This package also provides a set of built-in contexts (frameworks,
+ * CMSs, configs etc.) that can be used to update the application.
+ *
+ * ** Providers **
  *
  * The environment type is determined by the "active" provider - a registered
  * provider that has detected the current environment using its own logic.
@@ -44,6 +47,65 @@ use DrevOps\EnvironmentDetector\Providers\ProviderInterface;
  * reset using the ::reset() method, which will reset the detected type and the
  * active provider, but will preserver the registered providers.
  * Call ::reset(TRUE) to reset all registered providers as well.
+ *
+ * ** Contexts **
+ *
+ * Contexts are used to apply environment-specific changes to the application.
+ *
+ * The active context is determined by the "active" context - a registered
+ * context that has detected the current context using its own logic.
+ *
+ * A context may provide generic changes that are applied to the application.
+ * A provider may provide provider-specific context changes that are applied to
+ * the application as well.
+ *
+ * For example, a Drupal context applies the changes to the global $settings
+ * array, while a Lagoon provider's contextualize() method adds more
+ * Lagoon-specific changes to the $settings array. In this case, Acquia Cloud
+ * provider provides their own Acquia Cloud-specific changes to the $settings
+ * array.
+ *
+ * The goal of this package is to have enough context changes to cover the most
+ * common use cases, but also to allow adding custom contexts to cover the
+ * specific use cases within the application.
+ *
+ * ** ENVIRONMENT_TYPE **
+ *
+ * The detected environment type is stored in the `ENVIRONMENT_TYPE` environment
+ * variable. This variable can be used in the application to apply environment-
+ * specific changes.
+ *
+ * If the `ENVIRONMENT_TYPE` environment variable is already set, the value
+ * will be used as the environment type. This is useful in cases when the
+ * environment type needs to be set manually to override the detected type (for
+ * example, when debugging the application).
+ *
+ * ** Usage **
+ *
+ * @code
+ * Environment::init();                    // Init and populate the `ENVIRONMENT_TYPE` env var.
+ * $env_type = getenv('ENVIRONMENT_TYPE'); // Use the `ENVIRONMENT_TYPE` env var as needed.
+ * ...
+ * if ($env_type === Environment::LOCAL) {
+ *  // Apply local settings.
+ * }
+ * @endcode
+ *
+ * ** Shortcuts **
+ *
+ * @code
+ * Environment::init();
+ * if (Environment::isLocal()) {
+ *   // Apply local settings.
+ * }
+ * @endcode
+ *
+ * @code
+ * Environment::init();
+ * if (Environment::is('custom_type')) {
+ *   // Apply settings for a custom type.
+ * }
+ * @endcode
  *
  * @package DrevOps\EnvironmentDetector
  */
@@ -114,39 +176,80 @@ class Environment {
    */
   protected static mixed $override = NULL;
 
-  // @codeCoverageIgnoreStart
-  private function __construct() {
+  /**
+   * Initialize the environment detector.
+   *
+   * This is a main entry point to the environment detector and should be used
+   * in the most cases to initialize the environment.
+   *
+   * @code
+   * Environment::init();
+   * @endcode
+   *
+   * Or to skip applying some of the context changes.
+   * @code
+   * Environment::init(FALSE);
+   * @endcode
+   */
+  public static function init(bool $contextualize = TRUE): void {
+    static::type();
+
+    if ($contextualize) {
+      static::contextualize();
+    }
   }
 
-  private function __clone() {
-  }
-
-  // @codeCoverageIgnoreEnd
-
+  /**
+   * Check if the current environment is local.
+   */
   public static function isLocal(): bool {
     return static::is(self::LOCAL);
   }
 
+  /**
+   * Check if the current environment is CI.
+   */
   public static function isCi(): bool {
     return static::is(self::CI);
   }
 
+  /**
+   * Check if the current environment is development.
+   */
   public static function isDev(): bool {
     return static::is(self::DEVELOPMENT);
   }
 
+  /**
+   * Check if the current environment is preview.
+   */
   public static function isPreview(): bool {
     return static::is(self::PREVIEW);
   }
 
+  /**
+   * Check if the current environment is stage.
+   */
   public static function isStage(): bool {
     return static::is(self::STAGE);
   }
 
+  /**
+   * Check if the current environment is production.
+   */
   public static function isProd(): bool {
     return static::is(self::PRODUCTION);
   }
 
+  /**
+   * Check if the current environment is of a specific type.
+   *
+   * @param string $type
+   *   The environment type to check.
+   *
+   * @return bool
+   *   TRUE if the current environment is of the provided type, FALSE otherwise.
+   */
   public static function is(string $type): bool {
     return static::type() === $type;
   }
@@ -161,15 +264,27 @@ class Environment {
    *   The environment type.
    */
   public static function type(): string {
-    if (!static::$type) {
-      static::$type = static::provider()->type();
+    // Type can already be set by the environment variable.
+    // This will prevent the provider from identifying the environment type.
+    // But will still allow to apply the provider-specific context changes.
+    $type = getenv('ENVIRONMENT_TYPE');
+    if ($type) {
+      static::$type = $type;
+    }
+    else {
+      if (!static::$type) {
+        static::$type = static::provider()?->type();
 
-      if (static::$override && is_callable(static::$override)) {
-        static::$type = (static::$override)(static::$provider, static::$type);
+        if (static::$override && is_callable(static::$override)) {
+          static::$type = (static::$override)(static::$provider, static::$type);
+        }
       }
+
+      static::$type = static::$type ?: static::$fallback;
+      putenv('ENVIRONMENT_TYPE=' . static::$type);
     }
 
-    return static::$type ?: static::$fallback;
+    return static::$type;
   }
 
   /**
@@ -188,14 +303,30 @@ class Environment {
   }
 
   /**
+   * Get the fallback environment type.
+   */
+  public static function fallback(): string {
+    return static::$fallback;
+  }
+
+  /**
+   * Set the fallback environment type.
+   *
+   * @param string $type
+   *   The fallback environment type.
+   */
+  public static function setFallback(string $type): void {
+    static::$fallback = $type;
+  }
+
+  /**
    * Get the active provider.
    *
-   * @return ProviderInterface
+   * @return \DrevOps\EnvironmentDetector\Providers\ProviderInterface
    *   The active provider.
    */
   public static function provider(): ?ProviderInterface {
     if (!static::$provider instanceof ProviderInterface) {
-      // Collect all active providers.
       $active = array_filter(static::providers(), function (ProviderInterface $provider): bool {
         return $provider->active();
       });
@@ -217,8 +348,9 @@ class Environment {
    *   An array of directories to scan for provider classes. This paackage's
    *   default providers are registered by default.
    *
-   * @return ProviderInterface[]
+   * @return \DrevOps\EnvironmentDetector\Providers\ProviderInterface[]
    *   An array of registered providers.
+   *
    * @throws \RuntimeException
    *   If no environment providers were registered.
    */
@@ -257,7 +389,7 @@ class Environment {
   /**
    * Add a custom provider.
    *
-   * @param ProviderInterface $provider
+   * @param \DrevOps\EnvironmentDetector\Providers\ProviderInterface $provider
    *   The provider to add.
    *
    * @throws \InvalidArgumentException
@@ -278,50 +410,32 @@ class Environment {
   }
 
   /**
-   * Get the fallback environment type.
-   */
-  public static function fallback(): string {
-    return static::$fallback;
-  }
-
-  /**
-   * Set the fallback environment type.
-   *
-   * @param string $type
-   *   The fallback environment type.
-   */
-  public static function setFallback(string $type): void {
-    static::$fallback = $type;
-  }
-
-  /**
-   * Apply the active context to the provided data.
+   * Apply the active context.
    *
    * @code
-   * Environment::applyContext($data1, $data2, $data3, $data4);
+   * Environment::contextualize();
    * @endcode
-   *
-   * @param mixed $data
-   *   The data to apply the context to.
    */
-  public static function applyContext(?array &$data = NULL): void {
-    $context = static::context($data);
+  public static function contextualize(): void {
+    $context = static::context();
     if ($context instanceof ContextInterface) {
-      static::provider()->applyContext($context, $data);
+      // Apply generic context changes.
+      $context->contextualize();
+      // Apply provider-specific context changes.
+      static::provider()?->contextualize($context);
     }
   }
 
   /**
    * Get the active context.
    *
-   * @return ContextInterface
+   * @return \DrevOps\EnvironmentDetector\Contexts\ContextInterface
    *   The active context.
    */
-  public static function context(?array $data = NULL): ?ContextInterface {
+  public static function context(): ?ContextInterface {
     if (!static::$context instanceof ContextInterface) {
-      // Collect all active contexts.
-      $active = array_filter(static::contexts(), function (ContextInterface $context) use ($data): bool {
-        return $context->active($data);
+      $active = array_filter(static::contexts(), function (ContextInterface $context): bool {
+        return $context->active();
       });
 
       if (count($active) > 1) {
@@ -343,6 +457,7 @@ class Environment {
    *
    * @return \DrevOps\EnvironmentDetector\Contexts\ContextInterface[]
    *   An array of registered contexts.
+   *
    * @throws \RuntimeException
    *   If no environment contexts were registered.
    */
@@ -380,7 +495,7 @@ class Environment {
   /**
    * Add a custom context.
    *
-   * @param ContextInterface $context
+   * @param \DrevOps\EnvironmentDetector\Contexts\ContextInterface $context
    *   The context to add.
    *
    * @throws \InvalidArgumentException
@@ -415,5 +530,25 @@ class Environment {
       static::$contexts = [];
     }
   }
+
+  /**
+   * Prevent creating an instance of this class.
+   */
+  // phpcs:disable DrupalPractice.Commenting.CommentEmptyLine.SpacingAfter
+  // phpcs:disable Drupal.Commenting.FunctionComment.WrongStyle
+  // phpcs:disable Squiz.WhiteSpace.FunctionSpacing.After
+  // @codeCoverageIgnoreStart
+  private function __construct() {
+  }
+
+  /**
+   * Prevent cloning this class.
+   */
+  private function __clone() {
+  }
+  // @codeCoverageIgnoreEnd
+  // phpcs:enable DrupalPractice.Commenting.CommentEmptyLine.SpacingAfter
+  // phpcs:enable Drupal.Commenting.FunctionComment.WrongStyle
+  // phpcs:enable Squiz.WhiteSpace.FunctionSpacing.After
 
 }

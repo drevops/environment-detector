@@ -28,7 +28,7 @@ class Docker extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  protected static function envPrefixes(): array {
+  protected function envPrefixes(): array {
     return ['DOCKER', 'DOCKER_'];
   }
 
