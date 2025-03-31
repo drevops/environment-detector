@@ -19,20 +19,6 @@
 
 ---
 
-## Approach
-
-The type detection is based on a three-part process:
-
-1. Provider Detection: Hosting environments expose certain metadata (e.g.,
-   environment variables or files). These are used to identify the active
-   hosting provider.
-2. Type Mapping: Each provider can contextually map its environment information
-   to a predefined or custom type (e.g., dev, stage, prod). This type becomes
-   the central reference point for targeting environment-specific behavior,
-   configuration, or deployment logic from within a consumer application.
-3. Optional context handling: A provider can identify a context where it runs
-   (framework, CMS, runtime etc.) and make required adjustments.
-
 ## Features
 
 - Detects environment type: `local`, `ci`, `dev`, `preview`, `stage`, `prod`, or custom
@@ -63,6 +49,20 @@ The type detection is based on a three-part process:
 composer require drevops/environment-detector
 ```
 
+## Approach
+
+The type detection is based on a three-part process:
+
+1. Provider Detection: Hosting environments expose certain metadata (e.g.,
+   environment variables or files). These are used to identify the active
+   hosting provider.
+2. Type Mapping: Each provider can contextually map its environment information
+   to a predefined or custom type (e.g., dev, stage, prod). This type becomes
+   the central reference point for targeting environment-specific behavior,
+   configuration, or deployment logic from within a consumer application.
+3. Optional context handling: A provider can identify a context where it runs
+   (framework, CMS, runtime etc.) and make required adjustments.
+   
 ## Usage
 
 Detects the environment type based on the registered providers. This package
