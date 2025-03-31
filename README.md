@@ -32,16 +32,16 @@
 ## Supported providers
 
 - [Acquia](src/Providers/Acquia.php)
-- [Lagoon](src/Providers/Lagoon.php)
-- [Platform.sh](src/Providers/PlatformSh.php)
-- [Pantheon](src/Providers/Pantheon.php)
-- [Tugboat](src/Providers/Tugboat.php) 
 - [CircleCI](src/Providers/CircleCi.php)
-- [GitHub Actions](src/Providers/GitHubActions.php) 
-- [GitLab CI](src/Providers/GitLabCi.php)
 - [DDEV](src/Providers/Ddev.php)
-- [Lando](src/Providers/Lando.php) 
 - [Docker](src/Providers/Docker.php)
+- [GitHub Actions](src/Providers/GitHubActions.php)
+- [GitLab CI](src/Providers/GitLabCi.php)
+- [Lagoon](src/Providers/Lagoon.php)
+- [Lando](src/Providers/Lando.php)
+- [Pantheon](src/Providers/Pantheon.php)
+- [Platform.sh](src/Providers/PlatformSh.php)
+- [Tugboat](src/Providers/Tugboat.php)
 
 ## Installation
 
