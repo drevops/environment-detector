@@ -7,6 +7,7 @@ namespace DrevOps\EnvironmentDetector\Tests\Providers;
 use DrevOps\EnvironmentDetector\Environment;
 use DrevOps\EnvironmentDetector\Providers\Lagoon;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 #[CoversClass(Lagoon::class)]
 #[CoversClass(Environment::class)]
@@ -176,6 +177,84 @@ class LagoonTest extends ProviderTestBase {
     }
 
     return $data;
+  }
+
+  #[DataProvider('dataProviderApplyContextDrupal')]
+  public function testApplyContextDrupal(callable $before, array $data, array $expected, ?callable $after = NULL): void {
+    $before();
+
+    static::envSet('LAGOON_KUBERNETES', 'myproject');
+    Environment::applyContext($data);
+    $this->assertEquals($expected, $data);
+
+    if ($after !== NULL) {
+      $after($this);
+    }
+  }
+
+  public static function dataProviderApplyContextDrupal(): array {
+    $default = ['settings' => ['hash_salt' => 'abc'], 'config' => []];
+
+    return [
+      [
+        fn(): null => NULL,
+        $default,
+        array_merge_recursive([
+          'settings' => [
+            'reverse_proxy' => TRUE,
+            'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
+            'trusted_host_patterns' => [
+              '^nginx\-php$',
+              '^.+\.au\.amazee\.io$',
+            ],
+          ],
+          'config' => [],
+        ], $default),
+      ],
+
+      [
+        function (): void {
+          static::envSet('LAGOON_ROUTES', 'http://example1.com,https://example2.com');
+          static::envSet('LAGOON_PROJECT', 'myproject');
+          static::envSet('LAGOON_GIT_SAFE_BRANCH', 'develop');
+        },
+        $default,
+        array_merge_recursive([
+          'settings' => [
+            'reverse_proxy' => TRUE,
+            'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
+            'cache_prefix' => 'myproject_develop',
+            'trusted_host_patterns' => [
+              '^nginx\-php$',
+              '^.+\.au\.amazee\.io$',
+              '^example1\.com|example2\.com$',
+            ],
+          ],
+          'config' => [],
+        ], $default),
+      ],
+      [
+        function (): void {
+          static::envSet('LAGOON_ROUTES', 'http://example1.com,https://example2/com');
+          static::envSet('LAGOON_PROJECT', 'myproject');
+          static::envSet('ENVIRONMENT_PRODUCTION_BRANCH', 'master');
+        },
+        $default,
+        array_merge_recursive([
+          'settings' => [
+            'reverse_proxy' => TRUE,
+            'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
+            'cache_prefix' => 'myproject_master',
+            'trusted_host_patterns' => [
+              '^nginx\-php$',
+              '^.+\.au\.amazee\.io$',
+              '^example1\.com|example2/com$',
+            ],
+          ],
+          'config' => [],
+        ], $default),
+      ],
+    ];
   }
 
 }

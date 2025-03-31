@@ -76,7 +76,7 @@ class Lagoon extends AbstractProvider {
   /**
    * Applies Drupal context.
    */
-  public function applyContextDrupal(?array $data = NULL): void {
+  public function applyContextDrupal(?array &$data = NULL): void {
     if (!is_array($data) || empty($data['settings'])) {
       return;
     }
@@ -90,7 +90,9 @@ class Lagoon extends AbstractProvider {
     $settings['reverse_proxy_header'] = 'HTTP_TRUE_CLIENT_IP';
 
     // Cache prefix.
-    $settings['cache_prefix']['default'] = getenv('LAGOON_PROJECT') . '_' . (getenv('LAGOON_GIT_SAFE_BRANCH') ?: getenv('ENVIRONMENT_PRODUCTION_BRANCH'));
+    if (getenv('LAGOON_PROJECT') && (getenv('LAGOON_GIT_SAFE_BRANCH') || getenv('ENVIRONMENT_PRODUCTION_BRANCH'))) {
+      $settings['cache_prefix'] = getenv('LAGOON_PROJECT') . '_' . (getenv('LAGOON_GIT_SAFE_BRANCH') ?: getenv('ENVIRONMENT_PRODUCTION_BRANCH'));
+    }
 
     // URL when accessed from PHP processes in Lagoon.
     $settings['trusted_host_patterns'][] = '^nginx\-php$';
