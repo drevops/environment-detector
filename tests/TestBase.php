@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Tests;
 
+use AlexSkrypnyk\PhpunitHelpers\Traits\EnvTrait;
 use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 use DrevOps\EnvironmentDetector\Environment;
 use DrevOps\EnvironmentDetector\Providers\AbstractProvider;
