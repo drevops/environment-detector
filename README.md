@@ -10,7 +10,7 @@
 [![GitHub Issues](https://img.shields.io/github/issues/drevops/environment-detector.svg)](https://github.com/drevops/environment-detector/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/drevops/environment-detector.svg)](https://github.com/drevops/environment-detector/pulls)
 [![Test PHP](https://github.com/drevops/environment-detector/actions/workflows/test-php.yml/badge.svg)](https://github.com/drevops/environment-detector/actions/workflows/test-php.yml)
-[![codecov](https://codecov.io/gh/drevops/environment-detector/graph/badge.svg?token=7WEB1IXBYT)](https://codecov.io/gh/drevops/environment-detector)
+[![codecov](https://codecov.io/gh/drevops/environment-detector/graph/badge.svg?token=Q2S80GFSF6)](https://codecov.io/gh/drevops/environment-detector)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/drevops/environment-detector)
 ![LICENSE](https://img.shields.io/github/license/drevops/environment-detector)
 ![Renovate](https://img.shields.io/badge/renovate-enabled-green?logo=renovatebot)
