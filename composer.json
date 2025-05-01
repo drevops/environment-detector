@@ -27,7 +27,8 @@
         "opis/closure": "^4.0",
         "phpstan/phpstan": "^2",
         "phpunit/phpunit": "^12",
-        "rector/rector": "^2"
+        "rector/rector": "^2",
+        "skpr/config": "^3.0"
     },
     "minimum-stability": "stable",
     "prefer-stable": true,

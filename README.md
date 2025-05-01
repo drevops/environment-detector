@@ -22,7 +22,7 @@
 ## Features
 
 - Detects environment type: `local`, `ci`, `dev`, `preview`, `stage`, `prod`, or user-defined
-- Supports many popular providers out-of-the-box: [Acquia](src/Providers/Acquia.php), [CircleCI](src/Providers/CircleCi.php), [DDEV](src/Providers/Ddev.php), [Docker](src/Providers/Docker.php), [GitHub Actions](src/Providers/GitHubActions.php), [GitLab CI](src/Providers/GitLabCi.php), [Lagoon](src/Providers/Lagoon.php), [Lando](src/Providers/Lando.php), [Pantheon](src/Providers/Pantheon.php), [Platform.sh](src/Providers/PlatformSh.php), [Tugboat](src/Providers/Tugboat.php)
+- Supports many popular providers out-of-the-box: [Acquia](src/Providers/Acquia.php), [CircleCI](src/Providers/CircleCi.php), [DDEV](src/Providers/Ddev.php), [Docker](src/Providers/Docker.php), [GitHub Actions](src/Providers/GitHubActions.php), [GitLab CI](src/Providers/GitLabCi.php), [Lagoon](src/Providers/Lagoon.php), [Lando](src/Providers/Lando.php), [Pantheon](src/Providers/Pantheon.php), [Platform.sh](src/Providers/PlatformSh.php), [Skpr](src/Providers/Skpr.php), [Tugboat](src/Providers/Tugboat.php)
 - Detects custom contexts: [Drupal](src/Contexts/Drupal.php) (more to come)
 - Simple API for checking current environment
 - Extendable via custom providers and contexts
@@ -82,6 +82,7 @@ Supported built-ins:
 - [Lando](src/Providers/Lando.php)
 - [Pantheon](src/Providers/Pantheon.php)
 - [Platform.sh](src/Providers/PlatformSh.php)
+- [Skpr](src/Providers/Skpr.php)
 - [Tugboat](src/Providers/Tugboat.php)
 
 ## Advanced Usage

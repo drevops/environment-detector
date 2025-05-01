@@ -1,0 +1,11 @@
+{
+    "project.name": "test-project",
+    "environment.name": "dev",
+    "database.mysql.hostname": "mysql",
+    "database.mysql.database": "drupal",
+    "database.mysql.username": "drupal",
+    "database.mysql.password": "drupal",
+    "mount.temporary": "\/tmp",
+    "mount.private": "sites\/default\/files\/private",
+    "mount.local": "\/app"
+}
