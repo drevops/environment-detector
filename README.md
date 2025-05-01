@@ -21,8 +21,8 @@
 
 ## Features
 
-- Detects environment type: `local`, `ci`, `dev`, `preview`, `stage`, `prod`, or custom
-- Supports many popular providers out-of-the-box
+- Detects environment type: `local`, `ci`, `dev`, `preview`, `stage`, `prod`, or user-defined
+- Supports many popular providers out-of-the-box: [Acquia](src/Providers/Acquia.php), [CircleCI](src/Providers/CircleCi.php), [DDEV](src/Providers/Ddev.php), [Docker](src/Providers/Docker.php), [GitHub Actions](src/Providers/GitHubActions.php), [GitLab CI](src/Providers/GitLabCi.php), [Lagoon](src/Providers/Lagoon.php), [Lando](src/Providers/Lando.php), [Pantheon](src/Providers/Pantheon.php), [Platform.sh](src/Providers/PlatformSh.php), [Tugboat](src/Providers/Tugboat.php)
 - Detects custom contexts: [Drupal](src/Contexts/Drupal.php) (more to come)
 - Simple API for checking current environment
 - Extendable via custom providers and contexts
@@ -60,7 +60,7 @@ if (Environment::isProd()) {
 2. **Type mapping:** Once identified, the provider maps its internal state to a
    type like `dev`, `prod`, or a custom type.
 3. **Context detection**: Optionally applies provider- or framework-specific
-   changes (e.g., modify Drupal `$settings` global variable).
+   changes (e.g., modify Drupal `$settings` global variable to add `$settings['environment']` value).
 
 The resolved type is stored in the `ENVIRONMENT_TYPE` env var. If already set,
 this value is used directly.
