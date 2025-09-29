@@ -38,7 +38,7 @@ return static function (RectorConfig $config): void {
     SetList::DEAD_CODE,
     SetList::INSTANCEOF,
     SetList::TYPE_DECLARATION,
-    PHPUnitSetList::PHPUNIT_100,
+    PHPUnitSetList::PHPUNIT_120,
   ]);
 
   $config->rule(DeclareStrictTypesRector::class);
