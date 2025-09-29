@@ -51,7 +51,7 @@ interface ProviderInterface {
   /**
    * Get the provider data.
    *
-   * @return array
+   * @return array<string, mixed>
    *   The provider data.
    */
   public function data(): array;

@@ -27,6 +27,9 @@ abstract class AbstractProvider implements ProviderInterface {
 
   /**
    * Environment variables prefix. Providers should override this constant.
+   *
+   * @return array<string>
+   *   The list of environment variable prefixes used by the provider.
    */
   abstract protected function envPrefixes(): array;
 

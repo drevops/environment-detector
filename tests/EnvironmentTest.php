@@ -153,6 +153,7 @@ class EnvironmentTest extends TestBase {
     Environment::reset();
     $provider = $this->mockProvider();
     Environment::addProvider($provider);
+    // @phpstan-ignore-next-line
     Environment::setOverride([$provider, 'not_callable']);
   }
 
