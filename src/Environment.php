@@ -158,6 +158,8 @@ class Environment {
 
   /**
    * The list of registered providers.
+   *
+   * @var \DrevOps\EnvironmentDetector\Providers\ProviderInterface[]
    */
   protected static array $providers = [];
 
@@ -168,6 +170,8 @@ class Environment {
 
   /**
    * The list of registered contexts.
+   *
+   * @var \DrevOps\EnvironmentDetector\Contexts\ContextInterface[]
    */
   protected static array $contexts = [];
 
@@ -290,7 +294,7 @@ class Environment {
   /**
    * Set the override callback to change the environment type.
    *
-   * @param callable|array $callback
+   * @param callable|array<string> $callback
    *   The callback to change the environment type. Callback will receive the
    *   active provider, if any, and the currently discovered environment type
    *   as arguments.
@@ -366,7 +370,9 @@ class Environment {
         foreach ($files as $file) {
           $class = 'DrevOps\\EnvironmentDetector\\Providers\\' . pathinfo($file, PATHINFO_FILENAME);
           if (class_exists($class) && in_array(ProviderInterface::class, class_implements($class)) && !(new \ReflectionClass($class))->isAbstract()) {
-            static::addProvider(new $class());
+            $provider = new $class();
+            assert($provider instanceof ProviderInterface);
+            static::addProvider($provider);
           }
         }
       }
@@ -473,7 +479,9 @@ class Environment {
         foreach ($files as $file) {
           $class = 'DrevOps\\EnvironmentDetector\\Contexts\\' . pathinfo($file, PATHINFO_FILENAME);
           if (class_exists($class) && in_array(ContextInterface::class, class_implements($class)) && !(new \ReflectionClass($class))->isAbstract()) {
-            static::addContext(new $class());
+            $context = new $class();
+            assert($context instanceof ContextInterface);
+            static::addContext($context);
           }
         }
       }

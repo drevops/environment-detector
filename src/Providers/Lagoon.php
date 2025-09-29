@@ -65,7 +65,7 @@ class Lagoon extends AbstractProvider {
         $type = Environment::STAGE;
       }
       // Release and hotfix branches are considered Stage.
-      elseif (!empty(getenv('LAGOON_GIT_BRANCH')) && (str_starts_with(getenv('LAGOON_GIT_BRANCH'), 'release/') || str_starts_with(getenv('LAGOON_GIT_BRANCH'), 'hotfix/'))) {
+      elseif (!empty(getenv('LAGOON_GIT_BRANCH')) && (str_starts_with((string) getenv('LAGOON_GIT_BRANCH'), 'release/') || str_starts_with((string) getenv('LAGOON_GIT_BRANCH'), 'hotfix/'))) {
         $type = Environment::STAGE;
       }
     }
@@ -97,8 +97,9 @@ class Lagoon extends AbstractProvider {
     $settings['trusted_host_patterns'][] = '^.+\.au\.amazee\.io$';
 
     // Lagoon routes.
-    $routes = Environment::provider()->data()['LAGOON_ROUTES'] ?? [];
-    if (!empty($routes)) {
+    $provider = Environment::provider();
+    $routes = $provider?->data()['LAGOON_ROUTES'] ?? [];
+    if (!empty($routes) && is_string($routes)) {
       $patterns = str_replace(['.', 'https://', 'http://', ','], [
         '\.', '', '', '|',
       ], $routes);
