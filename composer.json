@@ -25,6 +25,7 @@
         "drupal/coder": "^8.3",
         "ergebnis/composer-normalize": "^2.42",
         "opis/closure": "^4.0",
+        "phpbench/phpbench": "^1.4",
         "phpstan/phpstan": "^2",
         "phpunit/phpunit": "^12",
         "rector/rector": "^2",
@@ -39,6 +40,7 @@
     },
     "autoload-dev": {
         "psr-4": {
+            "DrevOps\\EnvironmentDetector\\Benchmarks\\": "benchmarks",
             "DrevOps\\EnvironmentDetector\\Tests\\": "tests"
         },
         "classmap": [
@@ -65,6 +67,7 @@
         ],
         "reset": "rm -Rf vendor composer.lock",
         "test": "phpunit --no-coverage",
-        "test-coverage": "phpunit"
+        "test-coverage": "phpunit",
+        "test-performance": "mkdir -p .logs >/dev/null && phpbench run --report=aggregate --dump-file .logs/performance-report.json --output html --output csv --output console"
     }
 }

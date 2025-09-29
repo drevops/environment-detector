@@ -7,6 +7,7 @@ parameters:
   level: 9
 
   paths:
+    - benchmarks
     - src
     - tests
 
