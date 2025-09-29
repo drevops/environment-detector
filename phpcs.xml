@@ -15,6 +15,7 @@
     <arg value="p"/>
     <arg name="colors"/>
 
+    <file>benchmarks</file>
     <file>src</file>
     <file>tests</file>
 

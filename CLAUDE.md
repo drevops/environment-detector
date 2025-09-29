@@ -11,10 +11,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Testing
 - `composer test` - Run PHPUnit tests without coverage
 - `composer test-coverage` - Run PHPUnit tests with coverage reports
+- `composer test-performance` - Run PHPBench performance tests
 
 ### Single Test Execution
 - `./vendor/bin/phpunit tests/EnvironmentTest.php` - Run specific test file
 - `./vendor/bin/phpunit --filter testMethodName` - Run specific test method
+- `./vendor/bin/phpbench run benchmarks/DiscoveryBench.php` - Run specific performance benchmark
 
 ### Other Commands
 - `composer reset` - Clean vendor directory and composer.lock
@@ -69,9 +71,21 @@ This is a PHP library for zero-config environment type detection across multiple
 ## Testing Approach
 
 - PHPUnit 12 with strict configuration
-- Test base classes: `TestBase`, `ProviderTestBase`, `ContextTestBase`  
+- Test base classes: `TestBase`, `ProviderTestBase`, `ContextTestBase`
 - Coverage reports generated in `.logs/.coverage-html/`
 - Fixtures stored in `tests/fixtures/` for provider-specific data
+
+### Performance Testing
+
+- PHPBench for measuring filesystem scanning performance
+- Benchmarks in `benchmarks/` directory measure:
+  - Provider discovery via `scandir()` operations
+  - Context discovery performance
+  - Full initialization overhead
+  - Type checking after caching
+  - Multiple provider registration impact
+- Reports generated as JSON and HTML in `.logs/performance-report.*`
+- CI runs performance tests without xdebug/pcov for accurate measurements
 
 ## File Structure
 

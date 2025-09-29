@@ -88,3 +88,38 @@ jobs:
         uses: mxschmitt/action-tmate@v3
         timeout-minutes: 30
 
+  test-php-performance:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: /tmp/composer-cache
+          key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.3
+          extensions: none, ctype, dom, filter, hash, libxml, mbstring, pcre, pdo, phar, posix, readline, reflection, session, simplexml, spl, tokenizer, xml, xmlwriter
+          tools: none
+
+      - name: Install dependencies
+        run: composer install
+
+      - name: Run performance tests
+        run: composer test-performance
+
+      - name: Upload performance report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{github.job}}-performance-report
+          path: |
+            .logs/performance-report.csv
+            .logs/performance-report.json
+            .logs/performance-report.html
+          if-no-files-found: error

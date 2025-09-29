@@ -1,0 +1,19 @@
+{
+    "runner.bootstrap": "vendor/autoload.php",
+    "runner.path": "benchmarks",
+    "runner.php_config": {
+        "memory_limit": "1G"
+    },
+    "report.outputs": {
+        "html": {
+            "renderer": "html",
+            "path": ".logs/performance-report.html",
+            "title": "Environment Detector Performance Report"
+        },
+        "csv": {
+            "renderer": "delimited",
+            "file": ".logs/performance-report.csv",
+            "delimiter": ","
+        }
+    }
+}
