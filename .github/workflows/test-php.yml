@@ -138,3 +138,31 @@ jobs:
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body-path: pr_comment.md
+
+      - name: Find performance benchmarks issue
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        id: find-issue
+        run: |
+          ISSUE_NUMBER=$(gh issue list --state open --search "Performance benchmarks" --json number --jq '.[0].number')
+          echo "issue-number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Format performance results for issue comment
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "## 📊 Performance Benchmark Results" > issue_comment.md
+          echo "" >> issue_comment.md
+          echo "**Commit:** [\`${{ github.sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})" >> issue_comment.md
+          echo "**Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> issue_comment.md
+          echo "" >> issue_comment.md
+          sed -n '/<table/,/<\/table>/p' .logs/performance-report.html >> issue_comment.md
+          echo "" >> issue_comment.md
+          echo "---" >> issue_comment.md
+
+      - name: Post performance results to issue
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.find-issue.outputs.issue-number != ''
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ steps.find-issue.outputs.issue-number }}
+          body-path: issue_comment.md
