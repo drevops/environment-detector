@@ -10,10 +10,11 @@ use DrevOps\EnvironmentDetector\Environment;
 use PhpBench\Attributes as Bench;
 
 /**
- * Benchmark for provider and context discovery performance.
+ * Benchmark for provider and context loading performance.
  *
- * This benchmark measures the performance impact of scanning the filesystem
- * for providers and contexts using scandir().
+ * This benchmark measures the performance of loading providers and contexts
+ * from constants and instantiating classes, including the impact of adding
+ * custom providers and contexts.
  */
 class DiscoveryBench {
 
@@ -26,34 +27,34 @@ class DiscoveryBench {
   }
 
   /**
-   * Benchmark provider discovery from filesystem.
+   * Benchmark provider loading from constants.
    *
-   * This measures the time it takes to scan and load all providers
-   * from the filesystem using scandir().
+   * This measures the time it takes to load all built-in providers
+   * from constants and instantiate classes.
    */
   #[Bench\Revs(100)]
   #[Bench\Iterations(25)]
   #[Bench\Warmup(2)]
   #[Bench\RetryThreshold(5)]
   #[Bench\BeforeMethods(['setUp'])]
-  public function benchProviderDiscovery(): void {
-    // This will trigger filesystem scanning and provider instantiation.
+  public function benchProviderLoading(): void {
+    // This will trigger constant-based loading and provider instantiation.
     Environment::providers();
   }
 
   /**
-   * Benchmark context discovery from filesystem.
+   * Benchmark context loading from constants.
    *
-   * This measures the time it takes to scan and load all contexts
-   * from the filesystem using scandir().
+   * This measures the time it takes to load all built-in contexts
+   * from constants and instantiate classes.
    */
   #[Bench\Revs(100)]
   #[Bench\Iterations(25)]
   #[Bench\Warmup(2)]
   #[Bench\RetryThreshold(5)]
   #[Bench\BeforeMethods(['setUp'])]
-  public function benchContextDiscovery(): void {
-    // This will trigger filesystem scanning and context instantiation.
+  public function benchContextLoading(): void {
+    // This will trigger constant-based loading and context instantiation.
     Environment::contexts();
   }
 
@@ -98,21 +99,24 @@ class DiscoveryBench {
   }
 
   /**
-   * Benchmark multiple provider registrations.
+   * Benchmark custom provider additions with varying counts.
    *
-   * This measures the impact of adding multiple custom providers.
+   * This measures the impact of adding custom providers on top of built-in ones.
+   * Tests with 1, 2, 5, and 10 additional providers to see scaling performance.
    */
-  #[Bench\Revs(10)]
+  #[Bench\Revs(20)]
   #[Bench\Iterations(15)]
-  #[Bench\Warmup(1)]
-  #[Bench\RetryThreshold(10)]
+  #[Bench\Warmup(2)]
+  #[Bench\RetryThreshold(5)]
   #[Bench\BeforeMethods(['setUp'])]
-  public function benchMultipleProviderRegistrations(): void {
-    // Create dummy providers to test registration performance.
-    // Use unique IDs based on microtime to avoid conflicts across revisions.
+  #[Bench\ParamProviders(['provideCustomProviderCounts'])]
+  public function benchCustomProviderAdditions(array $params): void {
+    $count = $params['count'];
+    
+    // Add specified number of custom providers.
     static $counter = 0;
-    for ($i = 0; $i < 5; $i++) {
-      $uniqueId = 'test_' . uniqid() . '_' . (++$counter);
+    for ($i = 0; $i < $count; $i++) {
+      $uniqueId = 'test_provider_' . uniqid() . '_' . (++$counter);
       $provider = new class($uniqueId, 'Test Provider ' . $i) implements ProviderInterface {
 
         public function __construct(
@@ -120,44 +124,26 @@ class DiscoveryBench {
           private string $label,
         ) {}
 
-        /**
-         * {@inheritdoc}
-         */
         public function id(): string {
           return $this->id;
         }
 
-        /**
-         * {@inheritdoc}
-         */
         public function label(): string {
           return $this->label;
         }
 
-        /**
-         * {@inheritdoc}
-         */
         public function active(): bool {
           return FALSE;
         }
 
-        /**
-         * {@inheritdoc}
-         */
         public function type(): ?string {
           return NULL;
         }
 
-        /**
-         * {@inheritdoc}
-         */
         public function data(): array {
           return [];
         }
 
-        /**
-         * {@inheritdoc}
-         */
         public function contextualize(ContextInterface $context): void {
           // No-op for benchmark.
         }
@@ -166,6 +152,82 @@ class DiscoveryBench {
 
       Environment::addProvider($provider);
     }
+    
+    // Measure the performance with the added providers.
+    Environment::providers();
+    Environment::provider(); // This will trigger early termination logic.
+  }
+
+  /**
+   * Benchmark custom context additions with varying counts.
+   *
+   * This measures the impact of adding custom contexts on top of built-in ones.
+   * Tests with 1, 2, 5, and 10 additional contexts to see scaling performance.
+   */
+  #[Bench\Revs(20)]
+  #[Bench\Iterations(15)]
+  #[Bench\Warmup(2)]
+  #[Bench\RetryThreshold(5)]
+  #[Bench\BeforeMethods(['setUp'])]
+  #[Bench\ParamProviders(['provideCustomContextCounts'])]
+  public function benchCustomContextAdditions(array $params): void {
+    $count = $params['count'];
+    
+    // Add specified number of custom contexts.
+    static $counter = 0;
+    for ($i = 0; $i < $count; $i++) {
+      $uniqueId = 'test_context_' . uniqid() . '_' . (++$counter);
+      $context = new class($uniqueId, 'Test Context ' . $i) implements ContextInterface {
+
+        public function __construct(
+          private string $id,
+          private string $label,
+        ) {}
+
+        public function id(): string {
+          return $this->id;
+        }
+
+        public function label(): string {
+          return $this->label;
+        }
+
+        public function active(): bool {
+          return FALSE;
+        }
+
+        public function contextualize(): void {
+          // No-op for benchmark.
+        }
+
+      };
+
+      Environment::addContext($context);
+    }
+    
+    // Measure the performance with the added contexts.
+    Environment::contexts();
+    Environment::context(); // This will trigger early termination logic.
+  }
+
+  /**
+   * Provide parameter sets for custom provider count benchmarks.
+   */
+  public function provideCustomProviderCounts(): \Generator {
+    yield '1 custom provider' => ['count' => 1];
+    yield '2 custom providers' => ['count' => 2];
+    yield '5 custom providers' => ['count' => 5];
+    yield '10 custom providers' => ['count' => 10];
+  }
+
+  /**
+   * Provide parameter sets for custom context count benchmarks.
+   */
+  public function provideCustomContextCounts(): \Generator {
+    yield '1 custom context' => ['count' => 1];
+    yield '2 custom contexts' => ['count' => 2];
+    yield '5 custom contexts' => ['count' => 5];
+    yield '10 custom contexts' => ['count' => 10];
   }
 
 }
