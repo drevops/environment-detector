@@ -127,23 +127,10 @@ jobs:
       - name: Format performance results for PR comment
         if: github.event_name == 'pull_request'
         run: |
-          cat > pr_comment.md << EOF
-          ## 🚀 Performance Test Results
-
-          | Test | Mode | Variance | Memory |
-          |------|------|----------|--------|
-          EOF
-          tail -n +2 .logs/performance-report.csv | while IFS=, read -r benchmark subject set revs its mem_peak mode rstdev; do
-            # Format numbers for readability
-            variance=$(echo "$rstdev" | awk '{printf "±%.2f%%", $1}')
-            memory=$(echo "$mem_peak" | awk '{printf "%.1f MB", $1/1048576}')
-            mode_formatted=$(echo "$mode" | awk '{printf "%.3fμs", $1}')
-            # Clean up subject name for display
-            clean_subject=$(echo "$subject" | sed 's/bench//g' | sed 's/\([a-z]\)\([A-Z]\)/\1 \2/g')
-            echo "| $clean_subject | $mode_formatted | $variance | $memory |" >> pr_comment.md
-          done
-          echo "" >> pr_comment.md
-          echo "All tests completed successfully with excellent consistency! 🎯" >> pr_comment.md
+          echo "<div>" >> pr_comment.md
+          echo "<h2>🚀 Performance Test Results</h2>" >> pr_comment.md
+          sed -n '/<table/,/<\/table>/p' .logs/performance-report.html >> pr_comment.md
+          echo "</div>" >> pr_comment.md
 
       - name: Comment PR with performance results
         if: github.event_name == 'pull_request'
