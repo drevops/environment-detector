@@ -166,12 +166,13 @@ class EnvironmentTest extends TestBase {
     $this->assertSame(Environment::STAGE, Environment::fallback());
   }
 
-  public function testProvidersAbsent(): void {
-    $this->expectException(\RuntimeException::class);
-    $this->expectExceptionMessage('No environment providers were registered');
-
+  public function testProvidersAlwaysAvailable(): void {
     Environment::reset();
-    Environment::providers(['default' => 'non-exiting-dir']);
+    $providers = Environment::providers();
+
+    // Verify that built-in providers are loaded.
+    $this->assertNotEmpty($providers);
+    $this->assertGreaterThan(0, count($providers));
   }
 
   public function testProvidersNoDuplicated(): void {
@@ -267,12 +268,13 @@ class EnvironmentTest extends TestBase {
     $this->assertEquals(['key1' => 'value1', 'key2' => 'value2'], $arg2, 'Context is applied to arg2');
   }
 
-  public function testContextsAbsent(): void {
-    $this->expectException(\RuntimeException::class);
-    $this->expectExceptionMessage('No contexts were registered');
-
+  public function testContextsAlwaysAvailable(): void {
     Environment::reset();
-    Environment::contexts(['default' => 'non-exiting-dir']);
+    $contexts = Environment::contexts();
+
+    // Verify that built-in contexts are loaded.
+    $this->assertNotEmpty($contexts);
+    $this->assertGreaterThan(0, count($contexts));
   }
 
   public function testContextsNoDuplicated(): void {

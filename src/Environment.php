@@ -4,6 +4,19 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector;
 
+use DrevOps\EnvironmentDetector\Providers\Acquia;
+use DrevOps\EnvironmentDetector\Providers\CircleCi;
+use DrevOps\EnvironmentDetector\Providers\Ddev;
+use DrevOps\EnvironmentDetector\Providers\Docker;
+use DrevOps\EnvironmentDetector\Providers\GitHubActions;
+use DrevOps\EnvironmentDetector\Providers\GitLabCi;
+use DrevOps\EnvironmentDetector\Providers\Lagoon;
+use DrevOps\EnvironmentDetector\Providers\Lando;
+use DrevOps\EnvironmentDetector\Providers\Pantheon;
+use DrevOps\EnvironmentDetector\Providers\PlatformSh;
+use DrevOps\EnvironmentDetector\Providers\Skpr;
+use DrevOps\EnvironmentDetector\Providers\Tugboat;
+use DrevOps\EnvironmentDetector\Contexts\Drupal;
 use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 use DrevOps\EnvironmentDetector\Providers\ProviderInterface;
 
@@ -140,6 +153,35 @@ class Environment {
    * Defines a production environment.
    */
   public const PRODUCTION = 'production';
+
+  /**
+   * Known provider classes.
+   *
+   * @var array<string>
+   */
+  protected const PROVIDERS = [
+    Acquia::class,
+    CircleCi::class,
+    Ddev::class,
+    Docker::class,
+    GitHubActions::class,
+    GitLabCi::class,
+    Lagoon::class,
+    Lando::class,
+    Pantheon::class,
+    PlatformSh::class,
+    Skpr::class,
+    Tugboat::class,
+  ];
+
+  /**
+   * Known context classes.
+   *
+   * @var array<string>
+   */
+  protected const CONTEXTS = [
+    Drupal::class,
+  ];
 
   /**
    * The current environment type.
@@ -331,15 +373,20 @@ class Environment {
    */
   public static function provider(): ?ProviderInterface {
     if (!static::$provider instanceof ProviderInterface) {
-      $active = array_filter(static::providers(), function (ProviderInterface $provider): bool {
-        return $provider->active();
-      });
+      $active = NULL;
 
-      if (count($active) > 1) {
-        throw new \Exception('Multiple active environment providers detected');
+      // Use loop instead of array_filter() to allow early termination for
+      // performance reasons.
+      foreach (static::providers() as $provider) {
+        if ($provider->active()) {
+          if ($active !== NULL) {
+            throw new \Exception('Multiple active environment providers detected: ' . $active->id() . ' and ' . $provider->id());
+          }
+          $active = $provider;
+        }
       }
 
-      static::$provider = array_shift($active);
+      static::$provider = $active;
     }
 
     return static::$provider;
@@ -348,44 +395,14 @@ class Environment {
   /**
    * Get the list of registered providers.
    *
-   * @param array<int|string,string> $dirs
-   *   An array of directories to scan for provider classes. This package's
-   *   default providers are registered by default.
-   *
    * @return \DrevOps\EnvironmentDetector\Providers\ProviderInterface[]
    *   An array of registered providers.
-   *
-   * @throws \RuntimeException
-   *   If no environment providers were registered.
    */
-  public static function providers(array $dirs = []): array {
+  public static function providers(): array {
     if (!static::$providers) {
-      $dirs = array_merge(['default' => __DIR__ . '/Providers'], $dirs);
-
-      foreach ($dirs as $dir) {
-        if (!is_dir($dir)) {
-          continue;
-        }
-        $files = array_diff(scandir($dir), ['.', '..']);
-        foreach ($files as $file) {
-          $class = 'DrevOps\\EnvironmentDetector\\Providers\\' . pathinfo($file, PATHINFO_FILENAME);
-          if (class_exists($class) && in_array(ProviderInterface::class, class_implements($class)) && !(new \ReflectionClass($class))->isAbstract()) {
-            $provider = new $class();
-            assert($provider instanceof ProviderInterface);
-            static::addProvider($provider);
-          }
-        }
-      }
-
-      if (empty(static::$providers)) {
-        // We want to throw an exception if no environment providers were
-        // registered rather than relying on a "default" provider, as this is a
-        // sign of a severe misconfiguration, and we want to hard-fail the
-        // application.
-        // This is a safer approach than resolving to an incorrect environment
-        // type and silently leading to unexpected behavior within the
-        // application.
-        throw new \RuntimeException('No environment providers were registered');
+      // Load known providers from the constant (no filesystem scanning).
+      foreach (self::PROVIDERS as $class) {
+        static::addProvider(new $class());
       }
     }
 
@@ -402,13 +419,11 @@ class Environment {
    *   If a provider with the same ID is already registered.
    */
   public static function addProvider(ProviderInterface $provider): void {
-    foreach (static::$providers as $existing) {
-      if ($existing->id() === $provider->id()) {
-        throw new \InvalidArgumentException(sprintf('Provider with ID "%s" is already registered', $provider->id()));
-      }
+    if (array_key_exists($provider->id(), static::$providers)) {
+      throw new \InvalidArgumentException(sprintf('Provider with ID "%s" is already registered', $provider->id()));
     }
 
-    static::$providers[] = $provider;
+    static::$providers[$provider->id()] = $provider;
     // Reset the detected environment type to make sure it is recalculated
     // based on the new provider.
     static::$provider = NULL;
@@ -440,15 +455,20 @@ class Environment {
    */
   public static function context(): ?ContextInterface {
     if (!static::$context instanceof ContextInterface) {
-      $active = array_filter(static::contexts(), function (ContextInterface $context): bool {
-        return $context->active();
-      });
+      $active = NULL;
 
-      if (count($active) > 1) {
-        throw new \Exception('Multiple active contexts detected');
+      // Use loop instead of array_filter() to allow early termination for
+      // performance reasons.
+      foreach (static::contexts() as $context) {
+        if ($context->active()) {
+          if ($active !== NULL) {
+            throw new \Exception('Multiple active contexts detected: ' . $active->id() . ' and ' . $context->id());
+          }
+          $active = $context;
+        }
       }
 
-      static::$context = array_shift($active);
+      static::$context = $active;
     }
 
     return static::$context;
@@ -457,43 +477,14 @@ class Environment {
   /**
    * Get the list of registered contexts.
    *
-   * @param array<int|string,string> $dirs
-   *   An array of directories to scan for context classes. This package's
-   *   default contexts are registered by default.
-   *
    * @return \DrevOps\EnvironmentDetector\Contexts\ContextInterface[]
    *   An array of registered contexts.
-   *
-   * @throws \RuntimeException
-   *   If no environment contexts were registered.
    */
-  public static function contexts(array $dirs = []): array {
+  public static function contexts(): array {
     if (!static::$contexts) {
-      $dirs = array_merge(['default' => __DIR__ . '/Contexts'], $dirs);
-
-      foreach ($dirs as $dir) {
-        if (!is_dir($dir)) {
-          continue;
-        }
-        $files = array_diff(scandir($dir), ['.', '..']);
-        foreach ($files as $file) {
-          $class = 'DrevOps\\EnvironmentDetector\\Contexts\\' . pathinfo($file, PATHINFO_FILENAME);
-          if (class_exists($class) && in_array(ContextInterface::class, class_implements($class)) && !(new \ReflectionClass($class))->isAbstract()) {
-            $context = new $class();
-            assert($context instanceof ContextInterface);
-            static::addContext($context);
-          }
-        }
-      }
-
-      if (empty(static::$contexts)) {
-        // We want to throw an exception if no environment contexts were
-        // registered rather than relying on a "default" context, as this is a
-        // sign of a severe misconfiguration, and we want to hard-fail the
-        // application.
-        // This is a safer approach than resolving to an incorrect context
-        // and silently leading to unexpected behavior within the application.
-        throw new \RuntimeException('No contexts were registered');
+      // Load known contexts from the constant (no filesystem scanning).
+      foreach (self::CONTEXTS as $class) {
+        static::addContext(new $class());
       }
     }
 
@@ -510,13 +501,12 @@ class Environment {
    *   If a context with the same ID is already registered.
    */
   public static function addContext(ContextInterface $context): void {
-    foreach (static::$contexts as $existing) {
-      if ($existing->id() === $context->id()) {
-        throw new \InvalidArgumentException(sprintf('Context with ID "%s" is already registered', $context->id()));
-      }
+    if (array_key_exists($context->id(), static::$contexts)) {
+      throw new \InvalidArgumentException(sprintf('Context with ID "%s" is already registered', $context->id()));
     }
 
-    static::$contexts[] = $context;
+    static::$contexts[$context->id()] = $context;
+    // Reset the detected context to make sure it is recalculated.
     static::$context = NULL;
   }
 

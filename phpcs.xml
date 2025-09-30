@@ -31,10 +31,12 @@
         <exclude-pattern>*.Test\.php</exclude-pattern>
         <exclude-pattern>*.TestCase\.php</exclude-pattern>
         <exclude-pattern>*.test</exclude-pattern>
+        <exclude-pattern>*.Benchmark\.php</exclude-pattern>
     </rule>
     <rule ref="Drupal.Commenting.FunctionComment.Missing">
         <exclude-pattern>*.Test\.php</exclude-pattern>
         <exclude-pattern>*.TestCase\.php</exclude-pattern>
         <exclude-pattern>*.test</exclude-pattern>
+        <exclude-pattern>*.Benchmark\.php</exclude-pattern>
     </rule>
 </ruleset>
