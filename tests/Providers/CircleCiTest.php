@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(CircleCi::class)]
 #[CoversClass(Environment::class)]
-class CircleCiTest extends ProviderTestBase {
+class CircleCiTest extends ProviderTestCase {
 
   public static function dataProviderActive(): array {
     return [

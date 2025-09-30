@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(Docker::class)]
 #[CoversClass(Environment::class)]
-class DockerTest extends ProviderTestBase {
+class DockerTest extends ProviderTestCase {
 
   public static function dataProviderActive(): array {
     return [

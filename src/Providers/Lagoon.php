@@ -76,7 +76,7 @@ class Lagoon extends AbstractProvider {
   /**
    * Applies Drupal context.
    */
-  public static function contextualizeDrupal(): void {
+  public function contextualizeDrupal(): void {
     global $settings;
 
     // Lagoon reverse proxy settings.
@@ -97,8 +97,7 @@ class Lagoon extends AbstractProvider {
     $settings['trusted_host_patterns'][] = '^.+\.au\.amazee\.io$';
 
     // Lagoon routes.
-    $provider = Environment::provider();
-    $routes = $provider?->data()['LAGOON_ROUTES'] ?? [];
+    $routes = $this->data()['LAGOON_ROUTES'] ?? [];
     if (!empty($routes) && is_string($routes)) {
       $patterns = str_replace(['.', 'https://', 'http://', ','], [
         '\.', '', '', '|',

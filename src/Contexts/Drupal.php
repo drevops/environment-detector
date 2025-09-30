@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Contexts;
 
-use DrevOps\EnvironmentDetector\Environment;
-
 /**
  * Drupal context.
  *
@@ -41,7 +39,7 @@ class Drupal extends AbstractContext {
   #[\Override]
   public function contextualize(): void {
     global $settings;
-    $settings['environment'] = Environment::type();
+    $settings['environment'] = getenv('ENVIRONMENT_TYPE');
   }
 
 }

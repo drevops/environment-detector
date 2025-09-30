@@ -47,7 +47,9 @@ This is a PHP library for zero-config environment type detection across multiple
 ### Key Patterns
 
 - **Static Facade**: All functionality accessed through `Environment::` static methods
-- **Auto-discovery**: Providers and contexts are automatically registered by scanning directories
+- **Constant-based Loading**: Providers and contexts loaded from protected constants (no filesystem scanning)
+- **Early Termination**: Optimized conflict detection stops at first duplicate found
+- **Associative Storage**: Providers/contexts stored by ID as keys for O(1) duplicate detection
 - **Environment Variable Priority**: If `ENVIRONMENT_TYPE` is pre-set, it overrides provider detection
 - **Fallback Safety**: Defaults to `development` type to prevent production settings in dev
 
@@ -70,19 +72,19 @@ This is a PHP library for zero-config environment type detection across multiple
 ## Testing Approach
 
 - PHPUnit 12 with strict configuration
-- Test base classes: `TestBase`, `ProviderTestBase`, `ContextTestBase`
+- Test base classes: `EnvironmentDetectorTestCase`, `ProviderTestCase`, `ContextTestCase`
 - Coverage reports generated in `.logs/.coverage-html/`
 - Fixtures stored in `tests/fixtures/` for provider-specific data
 
 ### Performance Testing
 
-- PHPBench for measuring filesystem scanning performance
+- PHPBench for measuring constant-based loading and early termination performance
 - Benchmarks in `benchmarks/` directory measure:
-  - Provider discovery via `scandir()` operations
-  - Context discovery performance
+  - Provider loading via constants (no filesystem scanning)
+  - Context loading performance
   - Full initialization overhead
   - Type checking after caching
-  - Multiple provider registration impact
+  - Multiple provider registration impact with scaling analysis (1,2,5,10 additions)
 - Reports generated as JSON and HTML in `.logs/performance-report.*`
 - CI runs performance tests without xdebug/pcov for accurate measurements
 

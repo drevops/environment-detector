@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace DrevOps\EnvironmentDetector\Tests\Contexts;
 
 use DrevOps\EnvironmentDetector\Environment;
-use DrevOps\EnvironmentDetector\Tests\TestBase;
+use DrevOps\EnvironmentDetector\Tests\EnvironmentDetectorTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
-abstract class ContextTestBase extends TestBase {
+abstract class ContextTestCase extends EnvironmentDetectorTestCase {
 
   /**
    * The context ID discovered from the test class name.
@@ -32,11 +32,11 @@ abstract class ContextTestBase extends TestBase {
 
     if ($expect_equals) {
       Environment::reset();
-      $this->assertEquals($this->contextId, Environment::context()?->id(), sprintf('Context ID is %s', $this->contextId));
-      $this->assertNotEmpty(Environment::context()?->label() ?? '', 'Context label is not empty');
+      $this->assertEquals($this->contextId, Environment::getActiveContext()?->id(), sprintf('Context ID is %s', $this->contextId));
+      $this->assertNotEmpty(Environment::getActiveContext()?->label() ?? '', 'Context label is not empty');
     }
     else {
-      $this->assertNotEquals($this->contextId, Environment::context()?->id(), sprintf('Context ID is not %s', $this->contextId));
+      $this->assertNotEquals($this->contextId, Environment::getActiveContext()?->id(), sprintf('Context ID is not %s', $this->contextId));
     }
 
     if ($after !== NULL) {
@@ -51,7 +51,7 @@ abstract class ContextTestBase extends TestBase {
     $before();
 
     Environment::reset();
-    Environment::context()?->contextualize();
+    Environment::init(contextualize: TRUE);
 
     if ($after !== NULL) {
       $after($this);

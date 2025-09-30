@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 #[CoversClass(PlatformSh::class)]
 #[CoversClass(Environment::class)]
-class PlatformShTest extends ProviderTestBase {
+class PlatformShTest extends ProviderTestCase {
 
   public static function dataProviderActive(): array {
     return [

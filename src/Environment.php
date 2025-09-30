@@ -95,28 +95,38 @@ use DrevOps\EnvironmentDetector\Providers\ProviderInterface;
  *
  * ** Usage **
  *
+ * *** Direct usage with per-environment shortcuts: ***
+ *
  * @code
- * Environment::init();                    // Init and populate the `ENVIRONMENT_TYPE` env var.
- * $env_type = getenv('ENVIRONMENT_TYPE'); // Use the `ENVIRONMENT_TYPE` env var as needed.
- * ...
- * if ($env_type === Environment::LOCAL) {
+ * if (Environment::isLocal()) {
+ *   // Apply local settings.
+ * }
+ *
+ * if (Environment::isProd()) {
+ *   // Apply production settings.
+ * }
+ * @endcode
+ *
+ * *** Alternative usage with an environment variable: ***
+ * @code
+ * Environment::init();                                      // Init and populate the `ENVIRONMENT_TYPE` env var.
+ * if (getenv('ENVIRONMENT_TYPE') === Environment::LOCAL) {  // Use the `ENVIRONMENT_TYPE` env var as needed.
  *  // Apply local settings.
  * }
  * @endcode
  *
- * ** Shortcuts **
- *
+ * *** Advanced usage with customization before initialization: ***
  * @code
- * Environment::init();
- * if (Environment::isLocal()) {
+ * Environment::init(
+ *   contextualize: TRUE,                             // Whether to apply the context automatically when the environment type is requested.
+ *   fallback: Environment::DEVELOPMENT               // The fallback environment type.
+ *   override_callback: function($provider, $type) {  // The override callback to change the environment type.
+ *     // Custom logic to override the detected environment type.
+ *    return $type;
+ *   }
+ * );
+ * if (getenv('ENVIRONMENT_TYPE') === Environment::LOCAL) {  // Use the `ENVIRONMENT_TYPE` env var as needed.
  *   // Apply local settings.
- * }
- * @endcode
- *
- * @code
- * Environment::init();
- * if (Environment::is('custom_type')) {
- *   // Apply settings for a custom type.
  * }
  * @endcode
  *
@@ -155,7 +165,7 @@ class Environment {
   public const PRODUCTION = 'production';
 
   /**
-   * Known provider classes.
+   * Pre-defined provider classes.
    *
    * @var array<string>
    */
@@ -175,7 +185,7 @@ class Environment {
   ];
 
   /**
-   * Known context classes.
+   * Pre-defined context classes.
    *
    * @var array<string>
    */
@@ -184,14 +194,14 @@ class Environment {
   ];
 
   /**
-   * The current environment type.
-   */
-  protected static ?string $type = NULL;
-
-  /**
    * The fallback environment type.
    */
   protected static string $fallback = self::DEVELOPMENT;
+
+  /**
+   * The override callback to change the environment type.
+   */
+  protected static mixed $override = NULL;
 
   /**
    * The "active" provider. Only one provider can be active at a time.
@@ -201,9 +211,9 @@ class Environment {
   /**
    * The list of registered providers.
    *
-   * @var \DrevOps\EnvironmentDetector\Providers\ProviderInterface[]
+   * @var \DrevOps\EnvironmentDetector\Providers\ProviderInterface[]|null
    */
-  protected static array $providers = [];
+  protected static ?array $providers = NULL;
 
   /**
    * The "active" context. Only one context can be active at a time.
@@ -213,37 +223,14 @@ class Environment {
   /**
    * The list of registered contexts.
    *
-   * @var \DrevOps\EnvironmentDetector\Contexts\ContextInterface[]
+   * @var \DrevOps\EnvironmentDetector\Contexts\ContextInterface[]|null
    */
-  protected static array $contexts = [];
+  protected static ?array $contexts = NULL;
 
   /**
-   * The override callback to change the environment type.
+   * Flag indicating whether this instance has been initialized.
    */
-  protected static mixed $override = NULL;
-
-  /**
-   * Initialize the environment detector.
-   *
-   * This is a main entry point to the environment detector and should be used
-   * in the most cases to initialize the environment.
-   *
-   * @code
-   * Environment::init();
-   * @endcode
-   *
-   * Or to skip applying some of the context changes.
-   * @code
-   * Environment::init(FALSE);
-   * @endcode
-   */
-  public static function init(bool $contextualize = TRUE): void {
-    static::type();
-
-    if ($contextualize) {
-      static::contextualize();
-    }
-  }
+  protected static bool $isInitialized = FALSE;
 
   /**
    * Check if the current environment is local.
@@ -297,72 +284,125 @@ class Environment {
    *   TRUE if the current environment is of the provided type, FALSE otherwise.
    */
   public static function is(string $type): bool {
-    return static::type() === $type;
+    static::init();
+
+    return getenv('ENVIRONMENT_TYPE') === $type;
+  }
+
+  /**
+   * Initialize the environment detector.
+   *
+   * Use this only if you need to configure the environment detector before
+   * using it. Otherwise, use the ::is*() or ::is() methods directly.
+   *
+   * @code
+   * Environment::init(
+   *   contextualize: TRUE,                             // Whether to apply the context automatically when the environment type is requested.
+   *   fallback: Environment::DEVELOPMENT               // The fallback environment type.
+   *   override_callback: function($provider, $type) {  // The override callback to change the environment type.
+   *     // Custom logic to override the detected environment type.
+   *    return $type;
+   *   },
+   *   providers: [MyCustomProvider::class],            // An array of additional provider classes to register.
+   *   contexts: [MyCustomContext::class],              // An array of additional context classes to register.
+   * );
+   * @endcode
+   *
+   * @param bool $contextualize
+   *   Whether to apply the context automatically when the environment type is
+   *   requested. Set to FALSE to prevent automatic contextualization. In this
+   *   case, call ::contextualize() manually to apply the context.
+   * @param string $fallback
+   *   The fallback environment type to use if the active provider is not able
+   *   to determine the environment type. Default is Environment::DEVELOPMENT.
+   * @param callable|array<mixed,string>|null $override
+   *   The override callback to change the environment type. The callback will
+   *   receive the currently active provider, and the currently discovered
+   *   environment type as arguments. This allows to add custom types and
+   *   override the detected type based on the custom logic. The advantage of
+   *   such an approach is that the active provider is still discovered using
+   *   the provider's own logic, and the override callback is used only to
+   *   change the environment type.
+   * @param array<int,\DrevOps\EnvironmentDetector\Providers\ProviderInterface> $providers
+   *   An array of additional provider classes to register.
+   * @param array<int,\DrevOps\EnvironmentDetector\Contexts\ContextInterface> $contexts
+   *   An array of additional context classes to register.
+   */
+  public static function init(
+    bool $contextualize = TRUE,
+    string $fallback = self::DEVELOPMENT,
+    callable|array|null $override = NULL,
+    array $providers = [],
+    array $contexts = [],
+  ): void {
+    if (static::$isInitialized) {
+      return;
+    }
+
+    static::$fallback = $fallback;
+
+    if ($override) {
+      if (!is_callable($override)) {
+        throw new \InvalidArgumentException('The callback must be callable');
+      }
+      static::$override = $override;
+    }
+
+    static::collectProviders($providers);
+    static::collectContexts($contexts);
+
+    static::discoverType();
+
+    if ($contextualize) {
+      static::applyActiveContext();
+    }
+
+    static::$isInitialized = TRUE;
+  }
+
+  /**
+   * Reset the detected environment type.
+   *
+   * @param bool $all
+   *   Whether to reset all settings.
+   */
+  public static function reset(bool $all = FALSE): void {
+    static::$provider = NULL;
+    static::$context = NULL;
+    static::$providers = NULL;
+    static::$contexts = NULL;
+    static::$isInitialized = FALSE;
+
+    if ($all) {
+      static::$fallback = self::DEVELOPMENT;
+      static::$override = NULL;
+    }
   }
 
   /**
    * Get the current environment type.
    *
-   * Avoid using this method directly, use the ::is*() or ::is() methods
-   * instead.
+   * Use `getenv('ENVIRONMENT_TYPE')` to get the environment type.
    *
    * @return string
    *   The environment type.
    */
-  public static function type(): string {
-    // Type can already be set by the environment variable.
-    // This will prevent the provider from identifying the environment type.
-    // But will still allow to apply the provider-specific context changes.
+  protected static function discoverType(): string {
     $type = getenv('ENVIRONMENT_TYPE');
-    if ($type) {
-      static::$type = $type;
-    }
-    else {
-      if (!static::$type) {
-        static::$type = static::provider()?->type();
 
-        if (static::$override && is_callable(static::$override)) {
-          static::$type = (static::$override)(static::$provider, static::$type);
-        }
+    if (!$type) {
+      $type = static::getActiveProvider()?->type();
+
+      if (static::$override && is_callable(static::$override)) {
+        $type = (static::$override)(static::$provider, $type);
       }
 
-      static::$type = static::$type ?: static::$fallback;
-      putenv('ENVIRONMENT_TYPE=' . static::$type);
+      $type = $type ?: static::$fallback;
+
+      putenv('ENVIRONMENT_TYPE=' . $type);
     }
 
-    return static::$type;
-  }
-
-  /**
-   * Set the override callback to change the environment type.
-   *
-   * @param callable|array<string> $callback
-   *   The callback to change the environment type. Callback will receive the
-   *   active provider, if any, and the currently discovered environment type
-   *   as arguments.
-   */
-  public static function setOverride(callable|array $callback): void {
-    if (!is_callable($callback)) {
-      throw new \InvalidArgumentException('The callback must be callable');
-    }
-    static::$override = $callback;
-  }
-
-  /**
-   * Get the fallback environment type.
-   */
-  public static function fallback(): string {
-    return static::$fallback;
-  }
-
-  /**
-   * Set the fallback environment type.
-   *
-   * @param string $type
-   *   The fallback environment type.
-   */
-  public static function setFallback(string $type): void {
-    static::$fallback = $type;
+    return $type;
   }
 
   /**
@@ -371,13 +411,15 @@ class Environment {
    * @return \DrevOps\EnvironmentDetector\Providers\ProviderInterface
    *   The active provider.
    */
-  public static function provider(): ?ProviderInterface {
+  public static function getActiveProvider(): ?ProviderInterface {
     if (!static::$provider instanceof ProviderInterface) {
       $active = NULL;
 
-      // Use loop instead of array_filter() to allow early termination for
-      // performance reasons.
-      foreach (static::providers() as $provider) {
+      // Ensure at most one active provider exists.
+      // Stop checking as soon as more than one is detected to avoid unnecessary
+      // evaluations.
+      $providers = static::collectProviders();
+      foreach ($providers as $provider) {
         if ($provider->active()) {
           if ($active !== NULL) {
             throw new \Exception('Multiple active environment providers detected: ' . $active->id() . ' and ' . $provider->id());
@@ -395,15 +437,29 @@ class Environment {
   /**
    * Get the list of registered providers.
    *
+   * @param array<int,\DrevOps\EnvironmentDetector\Providers\ProviderInterface> $additional
+   *   An array of additional provider classes to register.
+   *
    * @return \DrevOps\EnvironmentDetector\Providers\ProviderInterface[]
    *   An array of registered providers.
    */
-  public static function providers(): array {
+  protected static function collectProviders(array $additional = []): array {
     if (!static::$providers) {
-      // Load known providers from the constant (no filesystem scanning).
-      foreach (self::PROVIDERS as $class) {
-        static::addProvider(new $class());
+      static::$providers = [];
+
+      $instances = array_merge(self::PROVIDERS, $additional);
+
+      foreach ($instances as $instance) {
+        $instance = is_string($instance) ? new $instance() : $instance;
+
+        if (!($instance instanceof ProviderInterface)) {
+          throw new \InvalidArgumentException('The provider must implement ProviderInterface');
+        }
+
+        static::addProvider($instance);
       }
+
+      static::$providers ??= [];
     }
 
     return static::$providers;
@@ -418,8 +474,8 @@ class Environment {
    * @throws \InvalidArgumentException
    *   If a provider with the same ID is already registered.
    */
-  public static function addProvider(ProviderInterface $provider): void {
-    if (array_key_exists($provider->id(), static::$providers)) {
+  protected static function addProvider(ProviderInterface $provider): void {
+    if (array_key_exists($provider->id(), static::$providers ?? [])) {
       throw new \InvalidArgumentException(sprintf('Provider with ID "%s" is already registered', $provider->id()));
     }
 
@@ -427,23 +483,18 @@ class Environment {
     // Reset the detected environment type to make sure it is recalculated
     // based on the new provider.
     static::$provider = NULL;
-    static::$type = NULL;
   }
 
   /**
    * Apply the active context.
-   *
-   * @code
-   * Environment::contextualize();
-   * @endcode
    */
-  public static function contextualize(): void {
-    $context = static::context();
+  protected static function applyActiveContext(): void {
+    $context = static::getActiveContext();
     if ($context instanceof ContextInterface) {
       // Apply generic context changes.
       $context->contextualize();
       // Apply provider-specific context changes.
-      static::provider()?->contextualize($context);
+      static::getActiveProvider()?->contextualize($context);
     }
   }
 
@@ -453,13 +504,15 @@ class Environment {
    * @return \DrevOps\EnvironmentDetector\Contexts\ContextInterface
    *   The active context.
    */
-  public static function context(): ?ContextInterface {
+  public static function getActiveContext(): ?ContextInterface {
     if (!static::$context instanceof ContextInterface) {
       $active = NULL;
 
-      // Use loop instead of array_filter() to allow early termination for
-      // performance reasons.
-      foreach (static::contexts() as $context) {
+      // Ensure at most one active context exists.
+      // Stop checking as soon as more than one is detected to avoid unnecessary
+      // evaluations.
+      $contexts = static::collectContexts();
+      foreach ($contexts as $context) {
         if ($context->active()) {
           if ($active !== NULL) {
             throw new \Exception('Multiple active contexts detected: ' . $active->id() . ' and ' . $context->id());
@@ -477,15 +530,29 @@ class Environment {
   /**
    * Get the list of registered contexts.
    *
+   * @param array<int, \DrevOps\EnvironmentDetector\Contexts\ContextInterface> $additional
+   *   An array of additional context classes to register.
+   *
    * @return \DrevOps\EnvironmentDetector\Contexts\ContextInterface[]
    *   An array of registered contexts.
    */
-  public static function contexts(): array {
+  protected static function collectContexts(array $additional = []): array {
     if (!static::$contexts) {
-      // Load known contexts from the constant (no filesystem scanning).
-      foreach (self::CONTEXTS as $class) {
-        static::addContext(new $class());
+      static::$contexts = [];
+
+      $instances = array_merge(self::CONTEXTS, $additional);
+
+      foreach ($instances as $instance) {
+        $instance = is_string($instance) ? new $instance() : $instance;
+
+        if (!($instance instanceof ContextInterface)) {
+          throw new \InvalidArgumentException('The context must implement ContextInterface');
+        }
+
+        static::addContext($instance);
       }
+
+      static::$contexts ??= [];
     }
 
     return static::$contexts;
@@ -500,33 +567,14 @@ class Environment {
    * @throws \InvalidArgumentException
    *   If a context with the same ID is already registered.
    */
-  public static function addContext(ContextInterface $context): void {
-    if (array_key_exists($context->id(), static::$contexts)) {
+  protected static function addContext(ContextInterface $context): void {
+    if (array_key_exists($context->id(), static::$contexts ?? [])) {
       throw new \InvalidArgumentException(sprintf('Context with ID "%s" is already registered', $context->id()));
     }
 
     static::$contexts[$context->id()] = $context;
     // Reset the detected context to make sure it is recalculated.
     static::$context = NULL;
-  }
-
-  /**
-   * Reset the detected environment type.
-   *
-   * @param bool $all
-   *   If TRUE, reset all registered providers as well.
-   */
-  public static function reset(bool $all = TRUE): void {
-    static::$type = NULL;
-    static::$provider = NULL;
-    static::$context = NULL;
-    static::$override = NULL;
-    static::$fallback = self::DEVELOPMENT;
-
-    if ($all) {
-      static::$providers = [];
-      static::$contexts = [];
-    }
   }
 
   /**

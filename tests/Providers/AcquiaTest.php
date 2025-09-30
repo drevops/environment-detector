@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 #[CoversClass(Acquia::class)]
 #[CoversClass(Environment::class)]
-class AcquiaTest extends ProviderTestBase {
+class AcquiaTest extends ProviderTestCase {
 
   public static function dataProviderActive(): array {
     return [
