@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `composer test-performance` - Run PHPBench performance tests
 
 ### Single Test Execution
-- `composer test --filter=testMethodName` - Run specific test method
+- `composer test -- --filter=testMethodName` - Run specific test method
 - `composer test-performance -- --filter=DiscoveryBenchmark` - Run specific performance benchmark
 
 ### Other Commands

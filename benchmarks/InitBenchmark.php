@@ -11,10 +11,12 @@ class InitBenchmark {
 
   public function setUp(): void {
     Environment::reset();
+    putenv('ENVIRONMENT_TYPE');
+    unset($_ENV['ENVIRONMENT_TYPE'], $_SERVER['ENVIRONMENT_TYPE']);
   }
 
   /**
-   * Data provider for the `benchAddProvider` benchmark.
+   * Data provider for the `provideInitRepeated` benchmark.
    *
    * @param array<string,int|bool> $params
    *   An array of parameters.
