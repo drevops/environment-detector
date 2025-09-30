@@ -4,6 +4,19 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector;
 
+use DrevOps\EnvironmentDetector\Providers\Acquia;
+use DrevOps\EnvironmentDetector\Providers\CircleCi;
+use DrevOps\EnvironmentDetector\Providers\Ddev;
+use DrevOps\EnvironmentDetector\Providers\Docker;
+use DrevOps\EnvironmentDetector\Providers\GitHubActions;
+use DrevOps\EnvironmentDetector\Providers\GitLabCi;
+use DrevOps\EnvironmentDetector\Providers\Lagoon;
+use DrevOps\EnvironmentDetector\Providers\Lando;
+use DrevOps\EnvironmentDetector\Providers\Pantheon;
+use DrevOps\EnvironmentDetector\Providers\PlatformSh;
+use DrevOps\EnvironmentDetector\Providers\Skpr;
+use DrevOps\EnvironmentDetector\Providers\Tugboat;
+use DrevOps\EnvironmentDetector\Contexts\Drupal;
 use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 use DrevOps\EnvironmentDetector\Providers\ProviderInterface;
 
@@ -140,6 +153,35 @@ class Environment {
    * Defines a production environment.
    */
   public const PRODUCTION = 'production';
+
+  /**
+   * Known provider classes.
+   *
+   * @var array<string>
+   */
+  protected const PROVIDERS = [
+    Acquia::class,
+    CircleCi::class,
+    Ddev::class,
+    Docker::class,
+    GitHubActions::class,
+    GitLabCi::class,
+    Lagoon::class,
+    Lando::class,
+    Pantheon::class,
+    PlatformSh::class,
+    Skpr::class,
+    Tugboat::class,
+  ];
+
+  /**
+   * Known context classes.
+   *
+   * @var array<string>
+   */
+  protected const CONTEXTS = [
+    Drupal::class,
+  ];
 
   /**
    * The current environment type.
@@ -348,44 +390,16 @@ class Environment {
   /**
    * Get the list of registered providers.
    *
-   * @param array<int|string,string> $dirs
-   *   An array of directories to scan for provider classes. This package's
-   *   default providers are registered by default.
-   *
    * @return \DrevOps\EnvironmentDetector\Providers\ProviderInterface[]
    *   An array of registered providers.
-   *
-   * @throws \RuntimeException
-   *   If no environment providers were registered.
    */
-  public static function providers(array $dirs = []): array {
+  public static function providers(): array {
     if (!static::$providers) {
-      $dirs = array_merge(['default' => __DIR__ . '/Providers'], $dirs);
-
-      foreach ($dirs as $dir) {
-        if (!is_dir($dir)) {
-          continue;
-        }
-        $files = array_diff(scandir($dir), ['.', '..']);
-        foreach ($files as $file) {
-          $class = 'DrevOps\\EnvironmentDetector\\Providers\\' . pathinfo($file, PATHINFO_FILENAME);
-          if (class_exists($class) && in_array(ProviderInterface::class, class_implements($class)) && !(new \ReflectionClass($class))->isAbstract()) {
-            $provider = new $class();
-            assert($provider instanceof ProviderInterface);
-            static::addProvider($provider);
-          }
-        }
-      }
-
-      if (empty(static::$providers)) {
-        // We want to throw an exception if no environment providers were
-        // registered rather than relying on a "default" provider, as this is a
-        // sign of a severe misconfiguration, and we want to hard-fail the
-        // application.
-        // This is a safer approach than resolving to an incorrect environment
-        // type and silently leading to unexpected behavior within the
-        // application.
-        throw new \RuntimeException('No environment providers were registered');
+      // Load known providers from the constant (no filesystem scanning).
+      foreach (self::PROVIDERS as $class) {
+        $provider = new $class();
+        assert($provider instanceof ProviderInterface);
+        static::addProvider($provider);
       }
     }
 
@@ -457,43 +471,16 @@ class Environment {
   /**
    * Get the list of registered contexts.
    *
-   * @param array<int|string,string> $dirs
-   *   An array of directories to scan for context classes. This package's
-   *   default contexts are registered by default.
-   *
    * @return \DrevOps\EnvironmentDetector\Contexts\ContextInterface[]
    *   An array of registered contexts.
-   *
-   * @throws \RuntimeException
-   *   If no environment contexts were registered.
    */
-  public static function contexts(array $dirs = []): array {
+  public static function contexts(): array {
     if (!static::$contexts) {
-      $dirs = array_merge(['default' => __DIR__ . '/Contexts'], $dirs);
-
-      foreach ($dirs as $dir) {
-        if (!is_dir($dir)) {
-          continue;
-        }
-        $files = array_diff(scandir($dir), ['.', '..']);
-        foreach ($files as $file) {
-          $class = 'DrevOps\\EnvironmentDetector\\Contexts\\' . pathinfo($file, PATHINFO_FILENAME);
-          if (class_exists($class) && in_array(ContextInterface::class, class_implements($class)) && !(new \ReflectionClass($class))->isAbstract()) {
-            $context = new $class();
-            assert($context instanceof ContextInterface);
-            static::addContext($context);
-          }
-        }
-      }
-
-      if (empty(static::$contexts)) {
-        // We want to throw an exception if no environment contexts were
-        // registered rather than relying on a "default" context, as this is a
-        // sign of a severe misconfiguration, and we want to hard-fail the
-        // application.
-        // This is a safer approach than resolving to an incorrect context
-        // and silently leading to unexpected behavior within the application.
-        throw new \RuntimeException('No contexts were registered');
+      // Load known contexts from the constant (no filesystem scanning).
+      foreach (self::CONTEXTS as $class) {
+        $context = new $class();
+        assert($context instanceof ContextInterface);
+        static::addContext($context);
       }
     }
 
