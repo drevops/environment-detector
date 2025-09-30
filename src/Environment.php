@@ -419,13 +419,11 @@ class Environment {
    *   If a provider with the same ID is already registered.
    */
   public static function addProvider(ProviderInterface $provider): void {
-    foreach (static::$providers as $existing) {
-      if ($existing->id() === $provider->id()) {
-        throw new \InvalidArgumentException(sprintf('Provider with ID "%s" is already registered', $provider->id()));
-      }
+    if (array_key_exists($provider->id(), static::$providers)) {
+      throw new \InvalidArgumentException(sprintf('Provider with ID "%s" is already registered', $provider->id()));
     }
 
-    static::$providers[] = $provider;
+    static::$providers[$provider->id()] = $provider;
     // Reset the detected environment type to make sure it is recalculated
     // based on the new provider.
     static::$provider = NULL;
@@ -503,13 +501,12 @@ class Environment {
    *   If a context with the same ID is already registered.
    */
   public static function addContext(ContextInterface $context): void {
-    foreach (static::$contexts as $existing) {
-      if ($existing->id() === $context->id()) {
-        throw new \InvalidArgumentException(sprintf('Context with ID "%s" is already registered', $context->id()));
-      }
+    if (array_key_exists($context->id(), static::$contexts)) {
+      throw new \InvalidArgumentException(sprintf('Context with ID "%s" is already registered', $context->id()));
     }
 
-    static::$contexts[] = $context;
+    static::$contexts[$context->id()] = $context;
+    // Reset the detected context to make sure it is recalculated.
     static::$context = NULL;
   }
 

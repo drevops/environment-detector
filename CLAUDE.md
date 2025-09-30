@@ -14,9 +14,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `composer test-performance` - Run PHPBench performance tests
 
 ### Single Test Execution
-- `./vendor/bin/phpunit tests/EnvironmentTest.php` - Run specific test file
-- `./vendor/bin/phpunit --filter testMethodName` - Run specific test method
-- `./vendor/bin/phpbench run benchmarks/DiscoveryBench.php` - Run specific performance benchmark
+- `composer test --filter=testMethodName` - Run specific test method
+- `composer test-performance -- --filter=DiscoveryBenchmark` - Run specific performance benchmark
 
 ### Other Commands
 - `composer reset` - Clean vendor directory and composer.lock
