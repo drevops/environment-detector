@@ -167,7 +167,6 @@ class EnvironmentTest extends TestBase {
   }
 
   public function testProvidersAlwaysAvailable(): void {
-    // With the optimization, built-in providers are always available from constants.
     Environment::reset();
     $providers = Environment::providers();
 
@@ -270,7 +269,6 @@ class EnvironmentTest extends TestBase {
   }
 
   public function testContextsAlwaysAvailable(): void {
-    // With the optimization, built-in contexts are always available from constants.
     Environment::reset();
     $contexts = Environment::contexts();
 

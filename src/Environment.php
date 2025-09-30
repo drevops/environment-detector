@@ -373,15 +373,20 @@ class Environment {
    */
   public static function provider(): ?ProviderInterface {
     if (!static::$provider instanceof ProviderInterface) {
-      $active = array_filter(static::providers(), function (ProviderInterface $provider): bool {
-        return $provider->active();
-      });
+      $active = NULL;
 
-      if (count($active) > 1) {
-        throw new \Exception('Multiple active environment providers detected');
+      // Use loop instead of array_filter() to allow early termination for
+      // performance reasons.
+      foreach (static::providers() as $provider) {
+        if ($provider->active()) {
+          if ($active !== NULL) {
+            throw new \Exception('Multiple active environment providers detected: ' . $active->id() . ' and ' . $provider->id());
+          }
+          $active = $provider;
+        }
       }
 
-      static::$provider = array_shift($active);
+      static::$provider = $active;
     }
 
     return static::$provider;
@@ -397,9 +402,7 @@ class Environment {
     if (!static::$providers) {
       // Load known providers from the constant (no filesystem scanning).
       foreach (self::PROVIDERS as $class) {
-        $provider = new $class();
-        assert($provider instanceof ProviderInterface);
-        static::addProvider($provider);
+        static::addProvider(new $class());
       }
     }
 
@@ -454,15 +457,20 @@ class Environment {
    */
   public static function context(): ?ContextInterface {
     if (!static::$context instanceof ContextInterface) {
-      $active = array_filter(static::contexts(), function (ContextInterface $context): bool {
-        return $context->active();
-      });
+      $active = NULL;
 
-      if (count($active) > 1) {
-        throw new \Exception('Multiple active contexts detected');
+      // Use loop instead of array_filter() to allow early termination for
+      // performance reasons.
+      foreach (static::contexts() as $context) {
+        if ($context->active()) {
+          if ($active !== NULL) {
+            throw new \Exception('Multiple active contexts detected: ' . $active->id() . ' and ' . $context->id());
+          }
+          $active = $context;
+        }
       }
 
-      static::$context = array_shift($active);
+      static::$context = $active;
     }
 
     return static::$context;
@@ -478,9 +486,7 @@ class Environment {
     if (!static::$contexts) {
       // Load known contexts from the constant (no filesystem scanning).
       foreach (self::CONTEXTS as $class) {
-        $context = new $class();
-        assert($context instanceof ContextInterface);
-        static::addContext($context);
+        static::addContext(new $class());
       }
     }
 
