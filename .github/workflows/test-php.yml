@@ -155,10 +155,9 @@ jobs:
           echo "" >> issue_comment.md
           echo "**Commit:** [\`${{ github.sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})" >> issue_comment.md
           echo "**Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> issue_comment.md
-          echo "" >> issue_comment.md
+          echo "<div>" >> issue_comment.md
           sed -n '/<table/,/<\/table>/p' .logs/performance-report.html >> issue_comment.md
-          echo "" >> issue_comment.md
-          echo "---" >> issue_comment.md
+          echo "</div>" >> issue_comment.md
 
       - name: Post performance results to issue
         if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.find-issue.outputs.issue-number != ''
