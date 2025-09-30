@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(GitLabCi::class)]
 #[CoversClass(Environment::class)]
-class GitLabCiTest extends ProviderTestBase {
+class GitLabCiTest extends ProviderTestCase {
 
   #[\Override]
   protected function setUp(): void {

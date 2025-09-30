@@ -13,7 +13,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(Environment::class)]
-class TestBase extends TestCase {
+class EnvironmentDetectorTestCase extends TestCase {
 
   use EnvTrait;
 
@@ -23,15 +23,19 @@ class TestBase extends TestCase {
   protected function setUp(): void {
     parent::setUp();
 
+    static::envUnset('ENVIRONMENT_TYPE');
+
     // Unset all environment variables that might be set by the environment
     // where these tests are running.
     static::envUnsetPrefix('GITHUB_');
     static::envUnsetPrefix('DOCKER_');
     static::envUnsetPrefix('RUNNER_');
     static::envUnsetPrefix('CI');
-    static::envUnset('ENVIRONMENT_TYPE');
 
-    Environment::reset();
+    global $settings;
+    $settings = [];
+    global $config;
+    $config = [];
   }
 
   /**
@@ -39,7 +43,7 @@ class TestBase extends TestCase {
    */
   protected function tearDown(): void {
     static::envReset();
-    Environment::reset();
+    Environment::reset(TRUE);
   }
 
   protected function mockProvider(string|callable|null $type = Environment::DEVELOPMENT, bool|callable|null $active = TRUE, callable|null $contextualize = NULL, ?callable $env_prefixes = NULL, string $id = 'mocked_provider'): ProviderInterface {

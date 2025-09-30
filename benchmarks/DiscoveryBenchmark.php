@@ -26,16 +26,14 @@ class DiscoveryBenchmark {
   #[Bench\Warmup(2)]
   #[Bench\RetryThreshold(5)]
   #[Bench\BeforeMethods(['setUp'])]
-  #[Bench\ParamProviders(['provideAddProvider'])]
-  public function benchAddProvider(array $params): void {
-    // Initialize providers to ensure built-in ones are loaded first.
-    Environment::providers();
-
+  #[Bench\ParamProviders(['provideCustomProviders'])]
+  public function benchCustomProviders(array $params): void {
+    $providers = [];
     // Add specified number of custom providers.
     static $counter = 0;
     for ($i = 0; $i < intval($params['count']); $i++) {
       $uniqueId = 'test_provider_' . uniqid() . '_' . (++$counter);
-      $provider = new class($uniqueId, 'Test Provider ' . $i) implements ProviderInterface {
+      $providers[] = new class($uniqueId, 'Test Provider ' . $i) implements ProviderInterface {
 
         public function __construct(
           private string $id,
@@ -68,16 +66,12 @@ class DiscoveryBenchmark {
         }
 
       };
-
-      Environment::addProvider($provider);
     }
 
-    // Access providers to ensure they are loaded.
-    Environment::provider();
-    Environment::type();
+    Environment::init(contextualize: FALSE, providers: $providers);
   }
 
-  public function provideAddProvider(): \Generator {
+  public function provideCustomProviders(): \Generator {
     yield '0 custom provider' => ['count' => 0];
     yield '1 custom provider' => ['count' => 1];
     yield '2 custom providers' => ['count' => 2];
@@ -96,16 +90,14 @@ class DiscoveryBenchmark {
   #[Bench\Warmup(2)]
   #[Bench\RetryThreshold(5)]
   #[Bench\BeforeMethods(['setUp'])]
-  #[Bench\ParamProviders(['provideAddContext'])]
-  public function benchAddContext(array $params): void {
-    // Initialize contexts to ensure built-in ones are loaded first.
-    Environment::contexts();
-
+  #[Bench\ParamProviders(['provideCustomContexts'])]
+  public function benchCustomContexts(array $params): void {
+    $contexts = [];
     // Add specified number of custom contexts.
     static $counter = 0;
     for ($i = 0; $i < intval($params['count']); $i++) {
       $uniqueId = 'test_context_' . uniqid() . '_' . (++$counter);
-      $context = new class($uniqueId, 'Test Context ' . $i) implements ContextInterface {
+      $contexts[] = new class($uniqueId, 'Test Context ' . $i) implements ContextInterface {
 
         public function __construct(
           private string $id,
@@ -130,15 +122,12 @@ class DiscoveryBenchmark {
         }
 
       };
-
-      Environment::addContext($context);
     }
 
-    // Access contexts to ensure they are loaded.
-    Environment::context();
+    Environment::init(contextualize: FALSE, contexts: $contexts);
   }
 
-  public function provideAddContext(): \Generator {
+  public function provideCustomContexts(): \Generator {
     yield '0 custom context' => ['count' => 0];
     yield '1 custom context' => ['count' => 1];
     yield '2 custom contexts' => ['count' => 2];

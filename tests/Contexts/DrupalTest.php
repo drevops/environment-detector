@@ -9,7 +9,7 @@ use DrevOps\EnvironmentDetector\Environment;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(Drupal::class)]
-class DrupalTest extends ContextTestBase {
+class DrupalTest extends ContextTestCase {
 
   public static function dataProviderActive(): array {
     return [
@@ -44,7 +44,7 @@ class DrupalTest extends ContextTestBase {
     return [
       [
         fn(): null => NULL,
-        function (ContextTestBase $test): void {
+        function (ContextTestCase $test): void {
           global $settings;
           $settings = [];
           $test->assertArrayNotHasKey('environment', $settings);
@@ -55,7 +55,7 @@ class DrupalTest extends ContextTestBase {
           global $settings;
           $settings = ['hash_salt' => 'abc'];
         },
-        function (ContextTestBase $test): void {
+        function (ContextTestCase $test): void {
           global $settings;
           $test->assertEquals(Environment::DEVELOPMENT, $settings['environment']);
         },

@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 #[CoversClass(Pantheon::class)]
 #[CoversClass(Environment::class)]
-class PantheonTest extends ProviderTestBase {
+class PantheonTest extends ProviderTestCase {
 
   public static function dataProviderActive(): array {
     return [

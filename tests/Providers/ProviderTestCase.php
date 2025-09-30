@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace DrevOps\EnvironmentDetector\Tests\Providers;
 
 use DrevOps\EnvironmentDetector\Environment;
-use DrevOps\EnvironmentDetector\Tests\TestBase;
+use DrevOps\EnvironmentDetector\Tests\EnvironmentDetectorTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
-abstract class ProviderTestBase extends TestBase {
+abstract class ProviderTestCase extends EnvironmentDetectorTestCase {
 
   /**
    * The provider ID discovered from the test class name.
@@ -31,11 +31,11 @@ abstract class ProviderTestBase extends TestBase {
     $before();
 
     if ($expect_equals) {
-      $this->assertEquals($this->providerId, Environment::provider()?->id(), sprintf('Provider ID is %s', $this->providerId));
-      $this->assertNotEmpty(Environment::provider()?->label() ?? '', 'Provider label is not empty');
+      $this->assertEquals($this->providerId, Environment::getActiveProvider()?->id(), sprintf('Provider ID is %s', $this->providerId));
+      $this->assertNotEmpty(Environment::getActiveProvider()?->label() ?? '', 'Provider label is not empty');
     }
     else {
-      $this->assertNotEquals($this->providerId, Environment::provider()?->id(), sprintf('Provider ID is not %s', $this->providerId));
+      $this->assertNotEquals($this->providerId, Environment::getActiveProvider()?->id(), sprintf('Provider ID is not %s', $this->providerId));
     }
 
     if ($after !== NULL) {
@@ -49,7 +49,7 @@ abstract class ProviderTestBase extends TestBase {
   public function testData(callable $before, ?array $expected, ?callable $after = NULL): void {
     $before();
 
-    $this->assertEquals($expected, Environment::provider()?->data());
+    $this->assertEquals($expected, Environment::getActiveProvider()?->data());
 
     if ($after !== NULL) {
       $after($this);
@@ -62,7 +62,7 @@ abstract class ProviderTestBase extends TestBase {
   public function testType(callable $before, ?string $expected, ?callable $after = NULL): void {
     $before();
 
-    $this->assertEquals($expected, Environment::provider()?->type());
+    $this->assertEquals($expected, Environment::getActiveProvider()?->type());
 
     if ($after !== NULL) {
       $after($this);

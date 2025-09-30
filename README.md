@@ -27,6 +27,7 @@
 - Simple API for checking current environment
 - Extendable via custom providers and contexts
 - Override and fallback support for precise control
+- Optimised for performance with static caching
 
 ## Installation
 
@@ -40,17 +41,24 @@ composer require drevops/environment-detector
 use DrevOps\EnvironmentDetector\Environment;
 
 Environment::init();
-
-// Using a pre-populated ENVIRONMENT_TYPE variable.
 if (getenv('ENVIRONMENT_TYPE') === Environment::LOCAL) {
-  // Local logic.
+  // Apply local settings.
+}
+```
+
+Alternatively, use the convenience methods:
+
+```php
+use DrevOps\EnvironmentDetector\Environment;
+
+// No need to init() - a first call to is*() will auto-initialize.
+if (Environment::isLocal()) {
+  // Apply local settings.
 }
 
-// Using a is* shorthand method.
 if (Environment::isProd()) {
-  // Production logic.
+  // Apply production settings.
 }
-
 ```
 
 ## How It Works
@@ -63,12 +71,46 @@ if (Environment::isProd()) {
    changes (e.g., modify Drupal `$settings` global variable to add `$settings['environment']` value).
 
 The resolved type is stored in the `ENVIRONMENT_TYPE` env var. If already set,
-this value is used directly.
+this value takes precedence over the provider detection. The `contextualize`
+still applies context changes even if the type is pre-set via environment
+variable.
+
+## Advanced Usage
+
+### Advanced initialization with customization
+
+```php
+Environment::init(
+  contextualize: TRUE,                            // Whether to apply the context automatically
+  fallback: Environment::DEVELOPMENT,             // The fallback environment type
+  override: function($provider, $type) {          // The override callback to change the environment type
+    if ($type === Environment::DEVELOPMENT && $provider->id() === 'tugboat') {
+      return 'qa';
+    }
+    return $type;
+  },
+  providers: [new MyCustomProvider()],            // Additional provider instances
+  contexts: [new MyCustomContext()],              // Additional context instances
+);
+```
+
+### Fallback Type
+
+If an environment type is not detected, a fallback `Environment::DEVELOPMENT` will be
+returned by default. This is to ensure that, in case of misconfiguration, the application
+does not apply local settings in production or production settings in local - 'development'
+type is the safest default.
+
+You can set a different fallback type during initialization:
+
+```php
+Environment::init(fallback: Environment::PRODUCTION);
+```
 
 ## Providers
 
 Only one provider can be active. If multiple match, or none match, an exception
-is thrown. Register custom providers using `addProvider()`.
+is thrown. Register custom providers using `init(providers:[MyCustomProvider::class])`.
 
 Supported built-ins:
 
@@ -85,59 +127,29 @@ Supported built-ins:
 - [Skpr](src/Providers/Skpr.php)
 - [Tugboat](src/Providers/Tugboat.php)
 
-## Advanced Usage
-
-### Override Detected Type
-
-You can override the resolved type based on the active provider and its returned
-type. You may return an existing or custom type.
-
-The advantage of this approach is that the provider resolution logic, and it's
-type are encapsulated within the provider itself, while the resulting type
-can be contextually overridden based on the discovered values.
-
-```php
-use DrevOps\EnvironmentDetector\Environment;
-use DrevOps\EnvironmentDetector\Provider;
-
-Environment::setOverride(function (Provider $provider, ?string $current): ?string {
-  if ($current === Environment::DEVELOPMENT && $provider->id() === 'tugboat') {
-    return 'qa';
-  }
-  return $current;
-});
-```
-
-### Fallback Type
-
-If an environment type is not detected, a fallback `Environment::DEV` will be
-returned by default.
-
-You can set a different default type using the `setFallback()` method.
-
-```php
-Environment::setFallback(Environment::DEV);
-```
-
 ### Accessing Provider Data
 
 ```php
-if (Environment::provider()->id() === 'acquia') {
-  // Acquia-specific logic.
-}
+// Initialize first to detect the active provider
+Environment::init();
 
-if (Environment::provider()->data()['HOSTING_BRANCH'] === 'main') {
-  // Main branch logic.
+$provider = Environment::getActiveProvider();
+if ($provider && $provider->id() === 'acquia') {
+  // Acquia-specific logic
+  $data = $provider->data();
+  if (isset($data['AH_SITE_GROUP'])) {
+    // Use Acquia-specific environment data
+  }
 }
 ```
 
 ### Adding a Custom Provider
 
 ```php
-use DrevOps\EnvironmentDetector\Provider;
+use DrevOps\EnvironmentDetector\Providers\ProviderInterface;
 use DrevOps\EnvironmentDetector\Environment;
 
-class CustomHosting implements Provider {
+class CustomHosting implements ProviderInterface {
   public function active(): bool {
     return isset($_SERVER['CUSTOM_ENV']);
   }
@@ -162,46 +174,55 @@ class CustomHosting implements Provider {
   public function label(): string {
     return 'Custom Hosting';
   }
+
+  public function contextualize(\DrevOps\EnvironmentDetector\Contexts\ContextInterface $context): void {
+    // Optional: Apply provider-specific context changes
+  }
 }
 
-Environment::addProvider(new CustomHosting());
+// Register the custom provider during initialization
+Environment::init(providers: [new CustomHosting()]);
 ```
 
 ### Contexts
 
-Apply generic changes to the runtime environment.
+Contexts apply environment-specific changes to frameworks or applications. A context may
+provide generic changes that are applied to the application. A provider may also provide
+provider-specific context changes.
 
-For example, setting a configuration value based on the active
-provider: a provider may require certain configurations to be present in the
-application which are not specific to an application's implementation.
+For example, a **Drupal** context applies changes to the global `$settings` array, while a
+**Lagoon** provider's `contextualize()` method adds Lagoon-specific changes to the `$settings` array.
 
-For example, a provider might require certain configuration values to exist (
-e.g., setting a CORS policy based on the active environment URL). These
-configurations are not specific to the application but are necessary for the
-application to function properly in this provider's environment.
-
-More specific or application-related settings should be handled in the
-application’s own configuration, outside of the context.
+The goal is to have enough context changes to cover the most common use cases, but also
+to allow adding custom contexts to cover specific use cases within the application.
 
 #### Adding a custom context
 
-You can use built-in or register your own with `addContext()`.
-
 ```php
-use DrevOps\EnvironmentDetector\Context;
+use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 
-class CustomContext implements Context {
-  // Add activation logic. Only one context can be active at a time.
+class CustomContext implements ContextInterface {
   public function active(): bool {
-    return isset($_SERVER['CUSTOM_CONTEXT']);
+    return class_exists('MyFramework');
   }
 
-  // Apply changes to the runtime environment.
   public function contextualize(): void {
+    // Apply generic context changes
     global $configuration;
-    $configuration['custom_value'] = $_SERVER['custom_value'];
+    $configuration['custom_value'] = $_SERVER['custom_value'] ?? 'default';
+  }
+
+  public function id(): string {
+    return 'myframework';
+  }
+
+  public function label(): string {
+    return 'My Framework';
   }
 }
+
+// Register the custom context during initialization
+Environment::init(contexts: [new CustomContext()]);
 ```
 
 ## Maintenance
@@ -216,4 +237,3 @@ composer test
 
 *This repository was created using the *[*Scaffold*](https://getscaffold.dev/)*
 project template.*
-

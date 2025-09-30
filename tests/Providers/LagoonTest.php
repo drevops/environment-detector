@@ -11,7 +11,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 
 #[CoversClass(Lagoon::class)]
 #[CoversClass(Environment::class)]
-class LagoonTest extends ProviderTestBase {
+class LagoonTest extends ProviderTestCase {
 
   public static function dataProviderActive(): array {
     return [

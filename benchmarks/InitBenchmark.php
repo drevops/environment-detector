@@ -26,16 +26,16 @@ class InitBenchmark {
   #[Bench\Warmup(2)]
   #[Bench\RetryThreshold(5)]
   #[Bench\BeforeMethods(['setUp'])]
-  #[Bench\ParamProviders(['provideInitRepeated'])]
-  public function benchInit(array $params): void {
+  #[Bench\ParamProviders(['provideIsAfterInit'])]
+  public function benchIsAfterInit(array $params): void {
     Environment::init((bool) $params['contextualize']);
 
     for ($i = 0; $i < intval($params['count']); $i++) {
-      Environment::type();
+      Environment::isProd();
     }
   }
 
-  public function provideInitRepeated(): \Generator {
+  public function provideIsAfterInit(): \Generator {
     yield '0, F' => ['count' => 0, 'contextualize' => FALSE];
     yield '1, F' => ['count' => 1, 'contextualize' => FALSE];
     yield '2, F' => ['count' => 2, 'contextualize' => FALSE];

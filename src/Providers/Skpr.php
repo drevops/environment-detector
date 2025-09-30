@@ -59,7 +59,7 @@ class Skpr extends AbstractProvider {
    *
    * @see https://docs.skpr.io/integrations/drupal
    */
-  public static function contextualizeDrupal(): void {
+  public function contextualizeDrupal(): void {
     if (!class_exists(SkprConfig::class) || !defined('DRUPAL_ROOT')) {
       return;
     }

@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(GitHubActions::class)]
 #[CoversClass(Environment::class)]
-class GitHubActionsTest extends ProviderTestBase {
+class GitHubActionsTest extends ProviderTestCase {
 
   /**
    * {@inheritdoc}

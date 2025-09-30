@@ -11,7 +11,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 
 #[CoversClass(Skpr::class)]
 #[CoversClass(Environment::class)]
-class SkprTest extends ProviderTestBase {
+class SkprTest extends ProviderTestCase {
 
   /**
    * Path to the fixtures directory.

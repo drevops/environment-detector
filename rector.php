@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 use Rector\CodeQuality\Rector\ClassMethod\InlineArrayReturnAssignRector;
 use Rector\CodeQuality\Rector\Empty_\SimplifyEmptyCheckOnEmptyArrayRector;
+use Rector\CodeQuality\Rector\If_\SimplifyIfElseToTernaryRector;
 use Rector\CodingStyle\Rector\ClassMethod\NewlineBeforeNewAssignSetRector;
 use Rector\CodingStyle\Rector\FuncCall\CountArrayToEmptyArrayComparisonRector;
 use Rector\CodingStyle\Rector\Stmt\NewlineAfterStatementRector;
@@ -51,9 +52,10 @@ return static function (RectorConfig $config): void {
     NewlineBeforeNewAssignSetRector::class,
     RemoveAlwaysTrueIfConditionRector::class,
     RemoveDeadStmtRector::class => ['tests/Unit/EnvironmentTest.php'],
-    RemoveUnusedVariableAssignRector::class => ['tests/Unit/EnvironmentTest.php'],
     RemoveEmptyClassMethodRector::class => ['src/Environment.php'],
+    RemoveUnusedVariableAssignRector::class => ['tests/Unit/EnvironmentTest.php'],
     SimplifyEmptyCheckOnEmptyArrayRector::class,
+    SimplifyIfElseToTernaryRector::class,
     // Dependencies.
     '*/vendor/*',
     '*/node_modules/*',

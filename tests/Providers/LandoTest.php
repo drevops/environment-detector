@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(Lando::class)]
 #[CoversClass(Environment::class)]
-class LandoTest extends ProviderTestBase {
+class LandoTest extends ProviderTestCase {
 
   public static function dataProviderActive(): array {
     return [

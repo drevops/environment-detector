@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(Ddev::class)]
 #[CoversClass(Environment::class)]
-class DdevTest extends ProviderTestBase {
+class DdevTest extends ProviderTestCase {
 
   public static function dataProviderActive(): array {
     return [

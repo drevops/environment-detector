@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(Tugboat::class)]
 #[CoversClass(Environment::class)]
-class TugboatTest extends ProviderTestBase {
+class TugboatTest extends ProviderTestCase {
 
   public static function dataProviderActive(): array {
     return [
