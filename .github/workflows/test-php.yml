@@ -134,7 +134,7 @@ jobs:
 
       - name: Comment PR with performance results
         if: github.event_name == 'pull_request'
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body-path: pr_comment.md
@@ -161,7 +161,7 @@ jobs:
 
       - name: Post performance results to issue
         if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.find-issue.outputs.issue-number != ''
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ steps.find-issue.outputs.issue-number }}
           body-path: issue_comment.md
