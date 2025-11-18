@@ -18,12 +18,12 @@ class Ddev extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  public const string ID = 'ddev';
+  public const ID = 'ddev';
 
   /**
    * {@inheritdoc}
    */
-  public const string LABEL = 'DDEV';
+  public const LABEL = 'DDEV';
 
   /**
    * {@inheritdoc}

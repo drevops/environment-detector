@@ -18,12 +18,12 @@ class Acquia extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  public const string ID = 'acquia';
+  public const ID = 'acquia';
 
   /**
    * {@inheritdoc}
    */
-  public const string LABEL = 'Acquia Cloud';
+  public const LABEL = 'Acquia Cloud';
 
   /**
    * {@inheritdoc}

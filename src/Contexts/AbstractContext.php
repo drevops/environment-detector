@@ -16,12 +16,12 @@ abstract class AbstractContext implements ContextInterface {
   /**
    * Context ID. Provers should override this constant.
    */
-  public const string ID = 'undefined';
+  public const ID = 'undefined';
 
   /**
    * Context label. Provers should override this constant.
    */
-  public const string LABEL = 'undefined';
+  public const LABEL = 'undefined';
 
   /**
    * {@inheritdoc}

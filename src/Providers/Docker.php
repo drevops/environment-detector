@@ -18,12 +18,12 @@ class Docker extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  public const string ID = 'docker';
+  public const ID = 'docker';
 
   /**
    * {@inheritdoc}
    */
-  public const string LABEL = 'Docker';
+  public const LABEL = 'Docker';
 
   /**
    * {@inheritdoc}

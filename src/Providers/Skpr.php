@@ -19,12 +19,12 @@ class Skpr extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  const string ID = 'skpr';
+  public const ID = 'skpr';
 
   /**
    * {@inheritdoc}
    */
-  const string LABEL = 'Skpr';
+  public const LABEL = 'Skpr';
 
   /**
    * {@inheritdoc}

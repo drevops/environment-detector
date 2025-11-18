@@ -18,12 +18,12 @@ class GitHubActions extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  public const string ID = 'github_actions';
+  public const ID = 'github_actions';
 
   /**
    * {@inheritdoc}
    */
-  public const string LABEL = 'GitHub Actions';
+  public const LABEL = 'GitHub Actions';
 
   /**
    * {@inheritdoc}

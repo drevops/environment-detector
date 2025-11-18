@@ -21,7 +21,6 @@ class SkprTest extends ProviderTestCase {
   /**
    * {@inheritdoc}
    */
-  #[\Override]
   protected function setUp(): void {
     parent::setUp();
     $this->fixturesDir = dirname(__DIR__) . '/fixtures/skpr/data';

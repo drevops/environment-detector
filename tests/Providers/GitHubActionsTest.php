@@ -15,7 +15,6 @@ class GitHubActionsTest extends ProviderTestCase {
   /**
    * {@inheritdoc}
    */
-  #[\Override]
   protected function setUp(): void {
     parent::setUp();
 

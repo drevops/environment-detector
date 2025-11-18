@@ -18,7 +18,6 @@ abstract class ProviderTestCase extends EnvironmentDetectorTestCase {
   /**
    * {@inheritdoc}
    */
-  #[\Override]
   protected function setUp(): void {
     parent::setUp();
 
