@@ -1,0 +1,127 @@
+name: Benchmark PHP
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+      - 'feature/**'
+  workflow_dispatch:
+
+jobs:
+  benchmark-php:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: /tmp/composer-cache
+          key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.3
+          extensions: none, ctype, dom, filter, hash, libxml, mbstring, pcre, pdo, phar, posix, readline, reflection, session, simplexml, spl, tokenizer, xml, xmlwriter
+          tools: none
+
+      - name: Install dependencies
+        run: composer install
+
+      - name: Run performance tests with baseline comparison
+        id: perf-test
+        run: |
+          if ./vendor/bin/phpbench log 2>/dev/null | grep -q "baseline"; then
+            echo "Baseline found, running comparison with 5% threshold"
+            composer benchmark -- --assert="mode(variant.time.avg) <= mode(baseline.time.avg) +/- 5%"
+          else
+            echo "No baseline found, running without comparison"
+            composer benchmark || echo "Benchmark completed (no baseline to compare)"
+          fi
+        continue-on-error: true
+
+      - name: Check performance test result
+        if: steps.perf-test.outcome == 'failure'
+        run: |
+          echo "## ⚠️ Performance Regression Detected" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "One or more benchmarks exceeded the ±5% threshold compared to baseline." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See the full performance report in the artifacts or PR comment for details." >> $GITHUB_STEP_SUMMARY
+          exit 1
+
+      - name: Upload performance report as artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{github.job}}-performance-report
+          path: |
+            .logs/performance-report.csv
+            .logs/performance-report.json
+            .logs/performance-report.html
+          if-no-files-found: error
+
+      - name: Format performance results for PR comment
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "## 🚀 Performance Test Results" >> pr_comment.md
+          echo "" >> pr_comment.md
+
+          if [ "${{ steps.perf-test.outcome }}" == "success" ]; then
+            echo "✅ Performance is within acceptable limits (±5% threshold)" >> pr_comment.md
+          else
+            echo "⚠️ **Performance regression detected!** One or more benchmarks exceeded the ±5% threshold." >> pr_comment.md
+          fi
+
+          echo "" >> pr_comment.md
+          echo "<details>" >> pr_comment.md
+          echo "<summary>Click to see Performance Comparison Table</summary>" >> pr_comment.md
+          echo "" >> pr_comment.md
+          echo "_Percentages show change compared to baseline_" >> pr_comment.md
+          echo "" >> pr_comment.md
+
+          # Extract table and remove leading whitespace
+          sed -n '/<table/,/<\/table>/p' .logs/performance-report.html | sed 's/^[[:space:]]*//' >> pr_comment.md
+
+          echo "" >> pr_comment.md
+          echo "</details>" >> pr_comment.md
+
+      - name: Comment PR with performance results
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v5
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: pr_comment.md
+
+      - name: Find performance benchmarks issue
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        id: find-issue
+        run: |
+          ISSUE_NUMBER=$(gh issue list --state open --search "Performance benchmarks" --json number --jq '.[0].number')
+          echo "issue-number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Format performance results for issue comment
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "## 📊 Performance Benchmark Results" > issue_comment.md
+          echo "" >> issue_comment.md
+          echo "**Commit:** [\`${{ github.sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})" >> issue_comment.md
+          echo "**Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> issue_comment.md
+          echo "<div>" >> issue_comment.md
+          sed -n '/<table/,/<\/table>/p' .logs/performance-report.html >> issue_comment.md
+          echo "</div>" >> issue_comment.md
+
+      - name: Post performance results to issue
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.find-issue.outputs.issue-number != ''
+        uses: peter-evans/create-or-update-comment@v5
+        with:
+          issue-number: ${{ steps.find-issue.outputs.issue-number }}
+          body-path: issue_comment.md
+          edit-mode: replace
