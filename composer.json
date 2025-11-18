@@ -57,6 +57,8 @@
         "sort-packages": true
     },
     "scripts": {
+        "benchmark": "mkdir -p .logs >/dev/null && phpbench run --ref=baseline --report=aggregate --dump-file .logs/performance-report.json --output html --output csv --output console",
+        "benchmark-baseline": "mkdir -p .logs .phpbench >/dev/null && phpbench run --store --tag=baseline --retry-threshold=5 --iterations=20 --report=aggregate --dump-file .logs/performance-report.json --output html --output csv --output console",
         "lint": [
             "phpcs",
             "phpstan",
@@ -68,7 +70,6 @@
         ],
         "reset": "rm -Rf vendor composer.lock",
         "test": "phpunit --no-coverage",
-        "test-coverage": "phpunit",
-        "test-performance": "mkdir -p .logs >/dev/null && phpbench run --report=aggregate --dump-file .logs/performance-report.json --output html --output csv --output console"
+        "test-coverage": "phpunit"
     }
 }

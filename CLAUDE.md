@@ -11,11 +11,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Testing
 - `composer test` - Run PHPUnit tests without coverage
 - `composer test-coverage` - Run PHPUnit tests with coverage reports
-- `composer test-performance` - Run PHPBench performance tests
+
+### Performance Benchmarking
+- `composer benchmark` - Run PHPBench performance tests and compare against baseline
+- `composer benchmark-baseline` - Update the performance baseline (after performance improvements or significant changes)
+- `composer benchmark -- --filter=DiscoveryBenchmark` - Run specific performance benchmark
 
 ### Single Test Execution
 - `composer test -- --filter=testMethodName` - Run specific test method
-- `composer test-performance -- --filter=DiscoveryBenchmark` - Run specific performance benchmark
 
 ### Other Commands
 - `composer reset` - Clean vendor directory and composer.lock
@@ -87,6 +90,13 @@ This is a PHP library for zero-config environment type detection across multiple
   - Multiple provider registration impact with scaling analysis (1,2,5,10 additions)
 - Reports generated as JSON and HTML in `.logs/performance-report.*`
 - CI runs performance tests without xdebug/pcov for accurate measurements
+
+#### Baseline Management
+
+- Baselines stored in `.phpbench/storage/` directory (tracked in git)
+- CI automatically compares performance against baseline with ±5% threshold
+- Baselines are updated manually by running `composer benchmark-baseline` and committing the changes
+- Performance regressions exceeding 5% threshold will fail CI builds
 
 ## File Structure
 
