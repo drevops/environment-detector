@@ -18,12 +18,12 @@ class Pantheon extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  public const string ID = 'pantheon';
+  public const ID = 'pantheon';
 
   /**
    * {@inheritdoc}
    */
-  public const string LABEL = 'Pantheon';
+  public const LABEL = 'Pantheon';
 
   /**
    * {@inheritdoc}

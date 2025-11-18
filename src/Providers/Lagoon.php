@@ -19,12 +19,12 @@ class Lagoon extends AbstractProvider {
    * {@inheritdoc}
    */
 
-  const string ID = 'lagoon';
+  public const ID = 'lagoon';
 
   /**
    * {@inheritdoc}
    */
-  const string LABEL = 'Lagoon';
+  public const LABEL = 'Lagoon';
 
   /**
    * {@inheritdoc}

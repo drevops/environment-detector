@@ -18,12 +18,12 @@ class Lando extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  public const string ID = 'lando';
+  public const ID = 'lando';
 
   /**
    * {@inheritdoc}
    */
-  public const string LABEL = 'Lando';
+  public const LABEL = 'Lando';
 
   /**
    * {@inheritdoc}

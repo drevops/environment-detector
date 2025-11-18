@@ -18,12 +18,12 @@ class CircleCi extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  public const string ID = 'circleci';
+  public const ID = 'circleci';
 
   /**
    * {@inheritdoc}
    */
-  public const string LABEL = 'CircleCI';
+  public const LABEL = 'CircleCI';
 
   /**
    * {@inheritdoc}

@@ -18,12 +18,12 @@ class GitLabCi extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  public const string ID = 'gitlab_ci';
+  public const ID = 'gitlab_ci';
 
   /**
    * {@inheritdoc}
    */
-  public const string LABEL = 'GitLab CI';
+  public const LABEL = 'GitLab CI';
 
   /**
    * {@inheritdoc}

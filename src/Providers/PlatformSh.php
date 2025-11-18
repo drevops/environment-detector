@@ -18,12 +18,12 @@ class PlatformSh extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  public const string ID = 'platformsh';
+  public const ID = 'platformsh';
 
   /**
    * {@inheritdoc}
    */
-  public const string LABEL = 'Platform.sh';
+  public const LABEL = 'Platform.sh';
 
   /**
    * {@inheritdoc}

@@ -12,7 +12,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(Environment::class)]
 class GitLabCiTest extends ProviderTestCase {
 
-  #[\Override]
   protected function setUp(): void {
     parent::setUp();
 

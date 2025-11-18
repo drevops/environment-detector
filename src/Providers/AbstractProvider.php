@@ -18,12 +18,12 @@ abstract class AbstractProvider implements ProviderInterface {
   /**
    * Provider ID. Providers should override this constant.
    */
-  public const string ID = 'undefined';
+  public const ID = 'undefined';
 
   /**
    * Provider label. Providers should override this constant.
    */
-  public const string LABEL = 'undefined';
+  public const LABEL = 'undefined';
 
   /**
    * Environment variables prefix. Providers should override this constant.

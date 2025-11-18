@@ -16,12 +16,12 @@ class Drupal extends AbstractContext {
   /**
    * {@inheritdoc}
    */
-  public const string ID = 'drupal';
+  public const ID = 'drupal';
 
   /**
    * {@inheritdoc}
    */
-  public const string LABEL = 'Drupal';
+  public const LABEL = 'Drupal';
 
   /**
    * {@inheritdoc}
@@ -36,7 +36,6 @@ class Drupal extends AbstractContext {
   /**
    * {@inheritdoc}
    */
-  #[\Override]
   public function contextualize(): void {
     global $settings;
     $settings['environment'] = getenv('ENVIRONMENT_TYPE');

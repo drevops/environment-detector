@@ -17,7 +17,7 @@
         "source": "https://github.com/drevops/environment-detector"
     },
     "require": {
-        "php": ">=8.3"
+        "php": ">=8.2"
     },
     "require-dev": {
         "alexskrypnyk/phpunit-helpers": "^0.13.0",

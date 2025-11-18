@@ -18,12 +18,12 @@ class Tugboat extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-  public const string ID = 'tugboat';
+  public const ID = 'tugboat';
 
   /**
    * {@inheritdoc}
    */
-  public const string LABEL = 'Tugboat';
+  public const LABEL = 'Tugboat';
 
   /**
    * {@inheritdoc}
