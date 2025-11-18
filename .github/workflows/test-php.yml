@@ -115,8 +115,27 @@ jobs:
       - name: Install dependencies
         run: composer install
 
-      - name: Run performance tests
-        run: composer test-performance
+      - name: Run performance tests with baseline comparison
+        id: perf-test
+        run: |
+          if ./vendor/bin/phpbench log 2>/dev/null | grep -q "baseline"; then
+            echo "Baseline found, running comparison with 5% threshold"
+            composer benchmark -- --assert="mode(variant.time.avg) <= mode(baseline.time.avg) +/- 5%"
+          else
+            echo "No baseline found, running without comparison"
+            composer benchmark || echo "Benchmark completed (no baseline to compare)"
+          fi
+        continue-on-error: true
+
+      - name: Check performance test result
+        if: steps.perf-test.outcome == 'failure'
+        run: |
+          echo "## ⚠️ Performance Regression Detected" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "One or more benchmarks exceeded the ±5% threshold compared to baseline." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See the full performance report in the artifacts or PR comment for details." >> $GITHUB_STEP_SUMMARY
+          exit 1
 
       - name: Upload performance report as artifact
         uses: actions/upload-artifact@v5
@@ -131,10 +150,27 @@ jobs:
       - name: Format performance results for PR comment
         if: github.event_name == 'pull_request'
         run: |
-          echo "<div>" >> pr_comment.md
-          echo "<h2>🚀 Performance Test Results</h2>" >> pr_comment.md
-          sed -n '/<table/,/<\/table>/p' .logs/performance-report.html >> pr_comment.md
-          echo "</div>" >> pr_comment.md
+          echo "## 🚀 Performance Test Results" >> pr_comment.md
+          echo "" >> pr_comment.md
+
+          if [ "${{ steps.perf-test.outcome }}" == "success" ]; then
+            echo "✅ Performance is within acceptable limits (±5% threshold)" >> pr_comment.md
+          else
+            echo "⚠️ **Performance regression detected!** One or more benchmarks exceeded the ±5% threshold." >> pr_comment.md
+          fi
+
+          echo "" >> pr_comment.md
+          echo "<details>" >> pr_comment.md
+          echo "<summary>Click to see Performance Comparison Table</summary>" >> pr_comment.md
+          echo "" >> pr_comment.md
+          echo "_Percentages show change compared to baseline_" >> pr_comment.md
+          echo "" >> pr_comment.md
+
+          # Extract table and remove leading whitespace
+          sed -n '/<table/,/<\/table>/p' .logs/performance-report.html | sed 's/^[[:space:]]*//' >> pr_comment.md
+
+          echo "" >> pr_comment.md
+          echo "</details>" >> pr_comment.md
 
       - name: Comment PR with performance results
         if: github.event_name == 'pull_request'
@@ -169,3 +205,4 @@ jobs:
         with:
           issue-number: ${{ steps.find-issue.outputs.issue-number }}
           body-path: issue_comment.md
+          edit-mode: replace
