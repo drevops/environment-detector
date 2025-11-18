@@ -32,8 +32,8 @@ class DiscoveryBenchmark {
     // Add specified number of custom providers.
     static $counter = 0;
     for ($i = 0; $i < intval($params['count']); $i++) {
-      $uniqueId = 'test_provider_' . uniqid() . '_' . (++$counter);
-      $providers[] = new class($uniqueId, 'Test Provider ' . $i) implements ProviderInterface {
+      $unique_id = 'test_provider_' . uniqid() . '_' . (++$counter);
+      $providers[] = new class($unique_id, 'Test Provider ' . $i) implements ProviderInterface {
 
         public function __construct(
           private string $id,
@@ -96,8 +96,8 @@ class DiscoveryBenchmark {
     // Add specified number of custom contexts.
     static $counter = 0;
     for ($i = 0; $i < intval($params['count']); $i++) {
-      $uniqueId = 'test_context_' . uniqid() . '_' . (++$counter);
-      $contexts[] = new class($uniqueId, 'Test Context ' . $i) implements ContextInterface {
+      $unique_id = 'test_context_' . uniqid() . '_' . (++$counter);
+      $contexts[] = new class($unique_id, 'Test Context ' . $i) implements ContextInterface {
 
         public function __construct(
           private string $id,
