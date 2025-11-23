@@ -20,7 +20,7 @@
         "php": ">=8.2"
     },
     "require-dev": {
-        "alexskrypnyk/phpunit-helpers": "^0.13.0",
+        "alexskrypnyk/phpunit-helpers": "^0.14.0",
         "dealerdirect/phpcodesniffer-composer-installer": "^1",
         "drevops/phpcs-standard": "^0.4.0",
         "drupal/coder": "^8.3",
