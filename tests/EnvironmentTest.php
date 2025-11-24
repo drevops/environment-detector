@@ -24,7 +24,7 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
     $this->assertEquals('production', Environment::PRODUCTION);
   }
 
-  #[DataProvider('environmentTypeDetectionDataProvider')]
+  #[DataProvider('dataProviderEnvironmentTypeDetection')]
   public function testEnvironmentTypeDetection(?string $env_var, string $expected, array $providers, ?callable $override, string $fallback): void {
     if ($env_var !== NULL) {
       static::envSet('ENVIRONMENT_TYPE', $env_var);
@@ -40,7 +40,7 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
     $this->assertEquals($expected, getenv('ENVIRONMENT_TYPE'));
   }
 
-  public static function environmentTypeDetectionDataProvider(): array {
+  public static function dataProviderEnvironmentTypeDetection(): array {
     return [
       'pre-set env var' => [
         Environment::PRODUCTION,
@@ -73,7 +73,7 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
     ];
   }
 
-  #[DataProvider('initParameterCombinationsDataProvider')]
+  #[DataProvider('dataProviderInitWithParameterCombinations')]
   public function testInitWithParameterCombinations(bool $contextualize, string $fallback, ?callable $override, array $providers, array $contexts, string $expected): void {
     Environment::init(
       contextualize: $contextualize,
@@ -86,7 +86,7 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
     $this->assertEquals($expected, getenv('ENVIRONMENT_TYPE'));
   }
 
-  public static function initParameterCombinationsDataProvider(): array {
+  public static function dataProviderInitWithParameterCombinations(): array {
     return [
       'default parameters' => [
         TRUE,
@@ -148,7 +148,7 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
     $this->assertEquals(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
   }
 
-  #[DataProvider('isEnvironmentTypeMethodsDataProvider')]
+  #[DataProvider('dataProviderIsEnvironmentTypeMethods')]
   public function testIsEnvironmentTypeMethods(string $env_type, array $expected_results): void {
     static::envSet('ENVIRONMENT_TYPE', $env_type);
 
@@ -160,7 +160,7 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
     $this->assertEquals($expected_results['isProd'], Environment::isProd());
   }
 
-  public static function isEnvironmentTypeMethodsDataProvider(): array {
+  public static function dataProviderIsEnvironmentTypeMethods(): array {
     return [
       'local environment' => [
         Environment::LOCAL,
@@ -231,13 +231,13 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
     ];
   }
 
-  #[DataProvider('customTypesDataProvider')]
+  #[DataProvider('dataProviderIsMethodWithCustomTypes')]
   public function testIsMethodWithCustomTypes(string $env_type, string $test_type, bool $expected): void {
     static::envSet('ENVIRONMENT_TYPE', $env_type);
     $this->assertEquals($expected, Environment::is($test_type));
   }
 
-  public static function customTypesDataProvider(): array {
+  public static function dataProviderIsMethodWithCustomTypes(): array {
     return [
       'custom type matches' => ['custom-env', 'custom-env', TRUE],
       'custom type does not match' => ['custom-env', 'different-env', FALSE],
@@ -338,7 +338,7 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
     Environment::init(contexts: [$context1, $context2]);
   }
 
-  #[DataProvider('contextualizationDataProvider')]
+  #[DataProvider('dataProviderContextualization')]
   public function testContextualization(bool $contextualize, bool $has_active_context, int $expected_contextualize_calls, int $expected_provider_contextualize_calls): void {
     $mock_context = $this->mockContext($has_active_context, 'test-context');
     $mock_provider = $this->mockProvider(Environment::STAGE, TRUE, id: 'test-provider');
@@ -370,7 +370,7 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
     $this->assertEquals(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
   }
 
-  public static function contextualizationDataProvider(): array {
+  public static function dataProviderContextualization(): array {
     return [
       'contextualize true with active context' => [TRUE, TRUE, 1, 1],
       'contextualize false with active context' => [FALSE, TRUE, 0, 0],
@@ -378,7 +378,7 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
     ];
   }
 
-  #[DataProvider('providerTypesDataProvider')]
+  #[DataProvider('dataProviderProviderTypes')]
   public function testProviderTypes(?string $provider_type, string $fallback, string $expected): void {
     $provider = $this->mockProvider($provider_type, TRUE, id: 'type-test-provider');
 
@@ -387,7 +387,7 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
     $this->assertEquals($expected, getenv('ENVIRONMENT_TYPE'));
   }
 
-  public static function providerTypesDataProvider(): array {
+  public static function dataProviderProviderTypes(): array {
     return [
       'provider returns local' => [Environment::LOCAL, Environment::DEVELOPMENT, Environment::LOCAL],
       'provider returns ci' => [Environment::CI, Environment::DEVELOPMENT, Environment::CI],
