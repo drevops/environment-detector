@@ -9,57 +9,53 @@ use DrevOps\EnvironmentDetector\Environment;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(Drupal::class)]
-class DrupalTest extends ContextTestCase {
+final class DrupalTest extends ContextTestCase {
 
-  public static function dataProviderActive(): array {
-    return [
-      [
-        function (): void {
+  public static function dataProviderActive(): \Iterator {
+    yield [
+      function (): void {
           global $settings;
           global $config;
           $settings = ['hash_salt' => 'abc'];
           $config = [];
-        }, TRUE,
-      ],
-      [
-        function (): void {
+      }, TRUE,
+    ];
+    yield [
+      function (): void {
           global $settings;
           global $config;
           $settings = [];
           $config = ['system.site' => ['uuid' => '123']];
-        }, TRUE,
-      ],
-      [
-        function (): void {
+      }, TRUE,
+    ];
+    yield [
+      function (): void {
           global $settings;
           global $config;
           $settings = ['hash_salt' => 'abc'];
           $config = ['system.site' => ['uuid' => '123']];
-        }, TRUE,
-      ],
+      }, TRUE,
     ];
   }
 
-  public static function dataProviderContextualize(): array {
-    return [
-      [
-        fn(): null => NULL,
-        function (ContextTestCase $test): void {
+  public static function dataProviderContextualize(): \Iterator {
+    yield [
+      fn(): null => NULL,
+      function (ContextTestCase $context_test_case): void {
           global $settings;
           $settings = [];
-          $test->assertArrayNotHasKey('environment', $settings);
-        },
-      ],
-      [
-        function (): void {
+          $context_test_case->assertArrayNotHasKey('environment', $settings);
+      },
+    ];
+    yield [
+      function (): void {
           global $settings;
           $settings = ['hash_salt' => 'abc'];
-        },
-        function (ContextTestCase $test): void {
+      },
+      function (ContextTestCase $context_test_case): void {
           global $settings;
-          $test->assertEquals(Environment::DEVELOPMENT, $settings['environment']);
-        },
-      ],
+          $context_test_case->assertEquals(Environment::DEVELOPMENT, $settings['environment']);
+      },
     ];
   }
 

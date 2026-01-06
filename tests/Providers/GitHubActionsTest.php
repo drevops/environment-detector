@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(GitHubActions::class)]
 #[CoversClass(Environment::class)]
-class GitHubActionsTest extends ProviderTestCase {
+final class GitHubActionsTest extends ProviderTestCase {
 
   /**
    * {@inheritdoc}
@@ -21,50 +21,44 @@ class GitHubActionsTest extends ProviderTestCase {
     $this->providerId = 'github_actions';
   }
 
-  public static function dataProviderActive(): array {
-    return [
-      [fn(): null => NULL, FALSE],
-      [fn() => static::envSet('GITHUB_WORKFLOW', 'workflow_name'), TRUE],
-    ];
+  public static function dataProviderActive(): \Iterator|array {
+    yield [fn(): null => NULL, FALSE];
+    yield [fn() => self::envSet('GITHUB_WORKFLOW', 'workflow_name'), TRUE];
   }
 
-  public static function dataProviderData(): array {
-    return [
-      [
-        fn(): null => NULL,
-        NULL,
-      ],
-      [
-        fn() => static::envSet('GITHUB_WORKFLOW', 'workflow_name'),
+  public static function dataProviderData(): \Iterator|array {
+    yield [
+      fn(): null => NULL,
+      NULL,
+    ];
+    yield [
+      fn() => self::envSet('GITHUB_WORKFLOW', 'workflow_name'),
         ['GITHUB_WORKFLOW' => 'workflow_name'],
-      ],
-      [
-        function (): void {
-          static::envSet('GITHUB_WORKFLOW', 'workflow_name');
-          static::envSet('GITHUB_WORKFLOW_REF', 'abc');
-          static::envSet('OTHER_VAR', 'other_val');
-        },
+    ];
+    yield [
+      function (): void {
+          self::envSet('GITHUB_WORKFLOW', 'workflow_name');
+          self::envSet('GITHUB_WORKFLOW_REF', 'abc');
+          self::envSet('OTHER_VAR', 'other_val');
+      },
         [
           'GITHUB_WORKFLOW' => 'workflow_name',
           'GITHUB_WORKFLOW_REF' => 'abc',
         ],
-      ],
     ];
   }
 
-  public static function dataProviderType(): array {
-    return [
-      [
-        fn(): null => NULL,
-        NULL,
-      ],
-      [
-        fn() => static::envSet('GITHUB_WORKFLOW', 'workflow_name'),
-        Environment::CI,
-        function ($test): void {
+  public static function dataProviderType(): \Iterator|array {
+    yield [
+      fn(): null => NULL,
+      NULL,
+    ];
+    yield [
+      fn() => self::envSet('GITHUB_WORKFLOW', 'workflow_name'),
+      Environment::CI,
+      function ($test): void {
           $test->assertTrue(Environment::isCi());
-        },
-      ],
+      },
     ];
   }
 

@@ -77,7 +77,12 @@ class EnvironmentDetectorTestCase extends TestCase {
       $mock->method('envPrefixes')->willReturnCallback($env_prefixes);
     }
 
-    $mock->method('id')->willReturn($id);
+    if (!empty($id)) {
+      $mock->expects($this->atLeastOnce())->method('id')->willReturn($id);
+    }
+    else {
+      $mock->expects($this->never())->method('id');
+    }
 
     return $mock;
   }
@@ -96,7 +101,7 @@ class EnvironmentDetectorTestCase extends TestCase {
       $mock->method('contextualize')->willReturnCallback($contextualize);
     }
 
-    $mock->method('id')->willReturn($id);
+    $mock->expects($this->atLeastOnce())->method('id')->willReturn($id);
 
     return $mock;
   }

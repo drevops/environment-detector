@@ -31,11 +31,11 @@ abstract class ContextTestCase extends EnvironmentDetectorTestCase {
 
     if ($expect_equals) {
       Environment::reset();
-      $this->assertEquals($this->contextId, Environment::getActiveContext()?->id(), sprintf('Context ID is %s', $this->contextId));
-      $this->assertNotEmpty(Environment::getActiveContext()?->label() ?? '', 'Context label is not empty');
+      $this->assertSame($this->contextId, Environment::getActiveContext()?->id(), sprintf('Context ID is %s', $this->contextId));
+      $this->assertNotEmpty(Environment::getActiveContext()->label(), 'Context label is not empty');
     }
     else {
-      $this->assertNotEquals($this->contextId, Environment::getActiveContext()?->id(), sprintf('Context ID is not %s', $this->contextId));
+      $this->assertNotSame($this->contextId, Environment::getActiveContext()?->id(), sprintf('Context ID is not %s', $this->contextId));
     }
 
     if ($after !== NULL) {
@@ -43,7 +43,7 @@ abstract class ContextTestCase extends EnvironmentDetectorTestCase {
     }
   }
 
-  abstract public static function dataProviderActive(): array;
+  abstract public static function dataProviderActive(): \Iterator;
 
   #[DataProvider('dataProviderContextualize')]
   public function testContextualize(callable $before, ?callable $after = NULL): void {
@@ -57,6 +57,6 @@ abstract class ContextTestCase extends EnvironmentDetectorTestCase {
     }
   }
 
-  abstract public static function dataProviderContextualize(): array;
+  abstract public static function dataProviderContextualize(): \Iterator;
 
 }

@@ -11,97 +11,85 @@ use PHPUnit\Framework\Attributes\DataProvider;
 
 #[CoversClass(Skpr::class)]
 #[CoversClass(Environment::class)]
-class SkprTest extends ProviderTestCase {
-
-  /**
-   * Path to the fixtures directory.
-   */
-  protected string $fixturesDir;
+final class SkprTest extends ProviderTestCase {
 
   /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->fixturesDir = dirname(__DIR__) . '/fixtures/skpr/data';
 
     if (!defined('DRUPAL_ROOT')) {
       define('DRUPAL_ROOT', '/app/web');
     }
   }
 
-  public static function dataProviderActive(): array {
-    return [
-      [fn(): null => NULL, FALSE],
-      [fn() => static::envSet('SKPR_ENV', 'dev'), TRUE],
-      [fn() => static::envSet('OTHER_VAR', 'value'), FALSE],
-    ];
+  public static function dataProviderActive(): \Iterator|array {
+    yield [fn(): null => NULL, FALSE];
+    yield [fn() => self::envSet('SKPR_ENV', 'dev'), TRUE];
+    yield [fn() => self::envSet('OTHER_VAR', 'value'), FALSE];
   }
 
-  public static function dataProviderData(): array {
-    return [
-      [
-        fn(): null => NULL,
-        NULL,
-      ],
-      [
-        fn(): null => static::envSetMultiple([
-          'OTHER_VAR' => 'value',
-        ]),
-        NULL,
-      ],
-      [
-        fn(): null => static::envSetMultiple([
-          'SKPR_ENV' => 'dev',
-        ]),
+  public static function dataProviderData(): \Iterator|array {
+    yield [
+      fn(): null => NULL,
+      NULL,
+    ];
+    yield [
+      fn(): null => self::envSetMultiple([
+        'OTHER_VAR' => 'value',
+      ]),
+      NULL,
+    ];
+    yield [
+      fn(): null => self::envSetMultiple([
+        'SKPR_ENV' => 'dev',
+      ]),
         [
           'SKPR_ENV' => 'dev',
         ],
-      ],
-      [
-        fn(): null => static::envSetMultiple([
-          'SKPR_ENV' => 'dev',
-          'SKPR_PROJECT' => 'myproject',
-          'OTHER_VAR' => 'value',
-        ]),
+    ];
+    yield [
+      fn(): null => self::envSetMultiple([
+        'SKPR_ENV' => 'dev',
+        'SKPR_PROJECT' => 'myproject',
+        'OTHER_VAR' => 'value',
+      ]),
         [
           'SKPR_ENV' => 'dev',
           'SKPR_PROJECT' => 'myproject',
         ],
-      ],
     ];
   }
 
-  public static function dataProviderType(): array {
-    return [
-      'no vars' => [
-        fn(): null => NULL,
-        NULL,
-      ],
-      'dev env' => [
-        fn(): null => static::envSetMultiple([
-          'SKPR_ENV' => 'dev',
-        ]),
-        Environment::DEVELOPMENT,
-      ],
-      'stg env' => [
-        fn(): null => static::envSetMultiple([
-          'SKPR_ENV' => 'stg',
-        ]),
-        Environment::STAGE,
-      ],
-      'prod env' => [
-        fn(): null => static::envSetMultiple([
-          'SKPR_ENV' => 'prod',
-        ]),
-        Environment::PRODUCTION,
-      ],
-      'unrecognized env' => [
-        fn(): null => static::envSetMultiple([
-          'SKPR_ENV' => 'custom',
-        ]),
-        NULL,
-      ],
+  public static function dataProviderType(): \Iterator|array {
+    yield 'no vars' => [
+      fn(): null => NULL,
+      NULL,
+    ];
+    yield 'dev env' => [
+      fn(): null => self::envSetMultiple([
+        'SKPR_ENV' => 'dev',
+      ]),
+      Environment::DEVELOPMENT,
+    ];
+    yield 'stg env' => [
+      fn(): null => self::envSetMultiple([
+        'SKPR_ENV' => 'stg',
+      ]),
+      Environment::STAGE,
+    ];
+    yield 'prod env' => [
+      fn(): null => self::envSetMultiple([
+        'SKPR_ENV' => 'prod',
+      ]),
+      Environment::PRODUCTION,
+    ];
+    yield 'unrecognized env' => [
+      fn(): null => self::envSetMultiple([
+        'SKPR_ENV' => 'custom',
+      ]),
+      NULL,
     ];
   }
 
@@ -109,7 +97,7 @@ class SkprTest extends ProviderTestCase {
   public function testContextualizeDrupal(callable $before, array $expected, ?callable $after = NULL): void {
     $before();
 
-    static::envSet('SKPR_ENV', 'dev');
+    self::envSet('SKPR_ENV', 'dev');
     Environment::init();
 
     global $settings;
@@ -126,77 +114,73 @@ class SkprTest extends ProviderTestCase {
     }
   }
 
-  public static function dataProviderContextualizeDrupal(): array {
+  public static function dataProviderContextualizeDrupal(): \Iterator {
     $default_settings = [
       'environment' => Environment::DEVELOPMENT,
       'hash_salt' => 'abc',
     ];
     $default_config = [];
-
-    return [
+    yield [
+      function () use ($default_settings, $default_config): void {
+        global $settings;
+        global $config;
+        $settings = $default_settings;
+        $config = $default_config;
+      },
       [
-        function () use ($default_settings, $default_config): void {
-          global $settings;
-          global $config;
-          $settings = $default_settings;
-          $config = $default_config;
-        },
-        [
-          'settings' => array_merge_recursive(
-            [
-              'file_public_path' => 'sites/default/files',
-              'file_temp_path' => '/tmp',
-              'file_private_path' => 'sites/default/files/private',
-              'php_storage' => [
-                'twig' => [
-                  'directory' => '/app/web/../.php',
-                ],
-              ],
-              'trusted_host_patterns' => [
-                '^127\.0\.0\.1$',
+        'settings' => array_merge_recursive(
+          [
+            'file_public_path' => 'sites/default/files',
+            'file_temp_path' => '/tmp',
+            'file_private_path' => 'sites/default/files/private',
+            'php_storage' => [
+              'twig' => [
+                'directory' => '/app/web/../.php',
               ],
             ],
-            $default_settings
-          ),
-          'config' => array_merge_recursive([], $default_config),
-        ],
-      ],
-
-      [
-        function () use ($default_settings, $default_config): void {
-          global $settings;
-          global $config;
-          $settings = $default_settings;
-          $config = $default_config;
-          $_SERVER['HTTP_X_FORWARDED_FOR'] = '192.168.1.1';
-        },
-        [
-          'settings' => array_merge_recursive(
-            [
-              'file_public_path' => 'sites/default/files',
-              'file_temp_path' => '/tmp',
-              'file_private_path' => 'sites/default/files/private',
-              'php_storage' => [
-                'twig' => [
-                  'directory' => '/app/web/../.php',
-                ],
-              ],
-              'trusted_host_patterns' => [
-                '^127\.0\.0\.1$',
-              ],
-              'reverse_proxy' => TRUE,
-              'reverse_proxy_proto_header' => 'HTTP_CLOUDFRONT_FORWARDED_PROTO',
-              'reverse_proxy_port_header' => 'SERVER_PORT',
-              'reverse_proxy_addresses' => [],
+            'trusted_host_patterns' => [
+              '^127\.0\.0\.1$',
             ],
-            $default_settings
-          ),
-          'config' => array_merge_recursive([], $default_config),
-        ],
-        function (): void {
-          unset($_SERVER['HTTP_X_FORWARDED_FOR']);
-        },
+          ],
+          $default_settings
+        ),
+        'config' => array_merge_recursive([], $default_config),
       ],
+    ];
+    yield [
+      function () use ($default_settings, $default_config): void {
+        global $settings;
+        global $config;
+        $settings = $default_settings;
+        $config = $default_config;
+        $_SERVER['HTTP_X_FORWARDED_FOR'] = '192.168.1.1';
+      },
+      [
+        'settings' => array_merge_recursive(
+          [
+            'file_public_path' => 'sites/default/files',
+            'file_temp_path' => '/tmp',
+            'file_private_path' => 'sites/default/files/private',
+            'php_storage' => [
+              'twig' => [
+                'directory' => '/app/web/../.php',
+              ],
+            ],
+            'trusted_host_patterns' => [
+              '^127\.0\.0\.1$',
+            ],
+            'reverse_proxy' => TRUE,
+            'reverse_proxy_proto_header' => 'HTTP_CLOUDFRONT_FORWARDED_PROTO',
+            'reverse_proxy_port_header' => 'SERVER_PORT',
+            'reverse_proxy_addresses' => [],
+          ],
+          $default_settings
+        ),
+        'config' => array_merge_recursive([], $default_config),
+      ],
+      function (): void {
+        unset($_SERVER['HTTP_X_FORWARDED_FOR']);
+      },
     ];
   }
 
