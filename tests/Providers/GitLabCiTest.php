@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(GitLabCi::class)]
 #[CoversClass(Environment::class)]
-class GitLabCiTest extends ProviderTestCase {
+final class GitLabCiTest extends ProviderTestCase {
 
   protected function setUp(): void {
     parent::setUp();
@@ -18,50 +18,44 @@ class GitLabCiTest extends ProviderTestCase {
     $this->providerId = 'gitlab_ci';
   }
 
-  public static function dataProviderActive(): array {
-    return [
-      [fn(): null => NULL, FALSE],
-      [fn() => static::envSet('GITLAB_CI', 'TRUE'), TRUE],
-    ];
+  public static function dataProviderActive(): \Iterator|array {
+    yield [fn(): null => NULL, FALSE];
+    yield [fn() => self::envSet('GITLAB_CI', 'TRUE'), TRUE];
   }
 
-  public static function dataProviderData(): array {
-    return [
-      [
-        fn(): null => NULL,
-        NULL,
-      ],
-      [
-        fn() => static::envSet('GITLAB_CI', 'TRUE'),
+  public static function dataProviderData(): \Iterator|array {
+    yield [
+      fn(): null => NULL,
+      NULL,
+    ];
+    yield [
+      fn() => self::envSet('GITLAB_CI', 'TRUE'),
         ['GITLAB_CI' => 'TRUE'],
-      ],
-      [
-        function (): void {
-          static::envSet('GITLAB_CI', 'TRUE');
-          static::envSet('CI_REPOSITORY_URL', 'abc');
-          static::envSet('OTHER_VAR', 'other_val');
-        },
+    ];
+    yield [
+      function (): void {
+          self::envSet('GITLAB_CI', 'TRUE');
+          self::envSet('CI_REPOSITORY_URL', 'abc');
+          self::envSet('OTHER_VAR', 'other_val');
+      },
         [
           'GITLAB_CI' => 'TRUE',
           'CI_REPOSITORY_URL' => 'abc',
         ],
-      ],
     ];
   }
 
-  public static function dataProviderType(): array {
-    return [
-      [
-        fn(): null => NULL,
-        NULL,
-      ],
-      [
-        fn() => static::envSet('GITLAB_CI', 'TRUE'),
-        Environment::CI,
-        function ($test): void {
+  public static function dataProviderType(): \Iterator|array {
+    yield [
+      fn(): null => NULL,
+      NULL,
+    ];
+    yield [
+      fn() => self::envSet('GITLAB_CI', 'TRUE'),
+      Environment::CI,
+      function ($test): void {
           $test->assertTrue(Environment::isCi());
-        },
-      ],
+      },
     ];
   }
 

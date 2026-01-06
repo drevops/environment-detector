@@ -53,7 +53,7 @@ abstract class AbstractProvider implements ProviderInterface {
   public function data(): array {
     return empty($this->envPrefixes())
         ? []
-        : array_filter(getenv(), fn($key): bool => array_reduce($this->envPrefixes(), fn($carry, $prefix): bool => $carry || str_starts_with($key, $prefix), FALSE), ARRAY_FILTER_USE_KEY);
+        : array_filter(getenv(), fn($key): bool => array_reduce($this->envPrefixes(), fn($carry, $prefix): bool => $carry || str_starts_with((string) $key, $prefix), FALSE), ARRAY_FILTER_USE_KEY);
   }
 
   /**

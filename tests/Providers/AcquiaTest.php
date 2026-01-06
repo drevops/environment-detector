@@ -11,67 +11,60 @@ use PHPUnit\Framework\TestCase;
 
 #[CoversClass(Acquia::class)]
 #[CoversClass(Environment::class)]
-class AcquiaTest extends ProviderTestCase {
+final class AcquiaTest extends ProviderTestCase {
 
-  public static function dataProviderActive(): array {
-    return [
-      [fn(): null => NULL, FALSE],
-      [fn() => static::envSet('AH_SITE_ENVIRONMENT', 'dev'), TRUE],
-    ];
+  public static function dataProviderActive(): \Iterator|array {
+    yield [fn(): null => NULL, FALSE];
+    yield [fn() => self::envSet('AH_SITE_ENVIRONMENT', 'dev'), TRUE];
   }
 
-  public static function dataProviderData(): array {
-    return [
-      [
-        fn(): null => NULL,
-        NULL,
-      ],
-      [
-        fn() => static::envSet('AH_SITE_ENVIRONMENT', 'dev'),
+  public static function dataProviderData(): \Iterator|array {
+    yield [
+      fn(): null => NULL,
+      NULL,
+    ];
+    yield [
+      fn() => self::envSet('AH_SITE_ENVIRONMENT', 'dev'),
         ['AH_SITE_ENVIRONMENT' => 'dev'],
-      ],
-      [
-        function (): void {
-          static::envSet('AH_SITE_ENVIRONMENT', 'dev');
-          static::envSet('AH_SITE_GROUP', 'group');
-          static::envSet('OTHER_VAR', 'other_val');
-        },
+    ];
+    yield [
+      function (): void {
+          self::envSet('AH_SITE_ENVIRONMENT', 'dev');
+          self::envSet('AH_SITE_GROUP', 'group');
+          self::envSet('OTHER_VAR', 'other_val');
+      },
         [
           'AH_SITE_ENVIRONMENT' => 'dev',
           'AH_SITE_GROUP' => 'group',
         ],
-      ],
     ];
   }
 
-  public static function dataProviderType(): array {
-    return [
-      [
-        fn(): null => NULL,
-        NULL,
-      ],
-      [
-        fn() => static::envSet('AH_SITE_ENVIRONMENT', 'dev'),
-        Environment::DEVELOPMENT,
-        function ($test): void {
+  public static function dataProviderType(): \Iterator|array {
+    yield [
+      fn(): null => NULL,
+      NULL,
+    ];
+    yield [
+      fn() => self::envSet('AH_SITE_ENVIRONMENT', 'dev'),
+      Environment::DEVELOPMENT,
+      function ($test): void {
           $test->assertTrue(Environment::isDev());
-        },
-      ],
-      [
-        fn() => static::envSet('AH_SITE_ENVIRONMENT', 'test'),
-        Environment::STAGE,
-        function (TestCase $test): void {
-          $test->assertTrue(Environment::isStage());
-        },
-      ],
-
-      [
-        fn() => static::envSet('AH_SITE_ENVIRONMENT', 'prod'),
-        Environment::PRODUCTION,
-        function ($test): void {
+      },
+    ];
+    yield [
+      fn() => self::envSet('AH_SITE_ENVIRONMENT', 'test'),
+      Environment::STAGE,
+      function (TestCase $test_case): void {
+          $test_case->assertTrue(Environment::isStage());
+      },
+    ];
+    yield [
+      fn() => self::envSet('AH_SITE_ENVIRONMENT', 'prod'),
+      Environment::PRODUCTION,
+      function ($test): void {
           $test->assertTrue(Environment::isProd());
-        },
-      ],
+      },
     ];
   }
 

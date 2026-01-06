@@ -8,12 +8,13 @@
          beStrictAboutOutputDuringTests="true"
          failOnRisky="true"
          failOnWarning="true"
+         failOnNotice="true"
          displayDetailsOnTestsThatTriggerWarnings="true"
          displayDetailsOnTestsThatTriggerErrors="true"
          displayDetailsOnTestsThatTriggerNotices="true"
          displayDetailsOnTestsThatTriggerDeprecations="true"
          displayDetailsOnPhpunitDeprecations="true">
-<testsuites>
+    <testsuites>
         <testsuite name="default">
             <directory>tests</directory>
         </testsuite>
@@ -33,6 +34,7 @@
               disableCodeCoverageIgnore="false">
         <report>
             <html outputDirectory=".logs/.coverage-html" lowUpperBound="50" highLowerBound="90"/>
+            <text outputFile=".logs/coverage.txt"/>
             <cobertura outputFile=".logs/cobertura.xml"/>
         </report>
     </coverage>

@@ -13,21 +13,21 @@ use PHPUnit\Framework\Attributes\DataProvider;
 #[CoversClass(Environment::class)]
 #[CoversClass(AbstractProvider::class)]
 #[CoversClass(AbstractContext::class)]
-class EnvironmentTest extends EnvironmentDetectorTestCase {
+final class EnvironmentTest extends EnvironmentDetectorTestCase {
 
   public function testConstants(): void {
-    $this->assertEquals('local', Environment::LOCAL);
-    $this->assertEquals('ci', Environment::CI);
-    $this->assertEquals('development', Environment::DEVELOPMENT);
-    $this->assertEquals('preview', Environment::PREVIEW);
-    $this->assertEquals('stage', Environment::STAGE);
-    $this->assertEquals('production', Environment::PRODUCTION);
+    $this->assertSame('local', Environment::LOCAL);
+    $this->assertSame('ci', Environment::CI);
+    $this->assertSame('development', Environment::DEVELOPMENT);
+    $this->assertSame('preview', Environment::PREVIEW);
+    $this->assertSame('stage', Environment::STAGE);
+    $this->assertSame('production', Environment::PRODUCTION);
   }
 
   #[DataProvider('dataProviderEnvironmentTypeDetection')]
   public function testEnvironmentTypeDetection(?string $env_var, string $expected, array $providers, ?callable $override, string $fallback): void {
     if ($env_var !== NULL) {
-      static::envSet('ENVIRONMENT_TYPE', $env_var);
+      self::envSet('ENVIRONMENT_TYPE', $env_var);
     }
 
     Environment::init(
@@ -37,39 +37,37 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
       providers: $providers
     );
 
-    $this->assertEquals($expected, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame($expected, getenv('ENVIRONMENT_TYPE'));
   }
 
-  public static function dataProviderEnvironmentTypeDetection(): array {
-    return [
-      'pre-set env var' => [
-        Environment::PRODUCTION,
-        Environment::PRODUCTION,
+  public static function dataProviderEnvironmentTypeDetection(): \Iterator {
+    yield 'pre-set env var' => [
+      Environment::PRODUCTION,
+      Environment::PRODUCTION,
         [],
-        NULL,
-        Environment::DEVELOPMENT,
-      ],
-      'fallback when no providers' => [
-        NULL,
-        Environment::PREVIEW,
+      NULL,
+      Environment::DEVELOPMENT,
+    ];
+    yield 'fallback when no providers' => [
+      NULL,
+      Environment::PREVIEW,
         [],
-        NULL,
-        Environment::PREVIEW,
-      ],
-      'override callback changes type' => [
-        NULL,
-        Environment::CI,
+      NULL,
+      Environment::PREVIEW,
+    ];
+    yield 'override callback changes type' => [
+      NULL,
+      Environment::CI,
         [],
-        fn($provider, $type): string => Environment::CI,
-        Environment::DEVELOPMENT,
-      ],
-      'override callback returning null uses fallback' => [
-        NULL,
-        Environment::STAGE,
+      fn($provider, $type): string => Environment::CI,
+      Environment::DEVELOPMENT,
+    ];
+    yield 'override callback returning null uses fallback' => [
+      NULL,
+      Environment::STAGE,
         [],
-        fn($provider, $type): null => NULL,
-        Environment::STAGE,
-      ],
+      fn($provider, $type): null => NULL,
+      Environment::STAGE,
     ];
   }
 
@@ -83,44 +81,42 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
       contexts: $contexts
     );
 
-    $this->assertEquals($expected, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame($expected, getenv('ENVIRONMENT_TYPE'));
   }
 
-  public static function dataProviderInitWithParameterCombinations(): array {
-    return [
-      'default parameters' => [
-        TRUE,
-        Environment::DEVELOPMENT,
-        NULL,
+  public static function dataProviderInitWithParameterCombinations(): \Iterator {
+    yield 'default parameters' => [
+      TRUE,
+      Environment::DEVELOPMENT,
+      NULL,
         [],
         [],
-        Environment::DEVELOPMENT,
-      ],
-      'contextualize false' => [
-        FALSE,
-        Environment::DEVELOPMENT,
-        NULL,
+      Environment::DEVELOPMENT,
+    ];
+    yield 'contextualize false' => [
+      FALSE,
+      Environment::DEVELOPMENT,
+      NULL,
         [],
         [],
-        Environment::DEVELOPMENT,
-      ],
-      'custom fallback' => [
-        TRUE,
-        Environment::PRODUCTION,
-        NULL,
+      Environment::DEVELOPMENT,
+    ];
+    yield 'custom fallback' => [
+      TRUE,
+      Environment::PRODUCTION,
+      NULL,
         [],
         [],
-        Environment::PRODUCTION,
-      ],
+      Environment::PRODUCTION,
     ];
   }
 
   public function testInitOnlyRunsOnce(): void {
     Environment::init(fallback: Environment::STAGE);
-    $this->assertEquals(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
 
     Environment::init(fallback: Environment::PRODUCTION);
-    $this->assertEquals(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
   }
 
   public function testActiveProviderDetection(): void {
@@ -128,29 +124,27 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
     $inactive_provider = $this->mockProvider(Environment::LOCAL, FALSE, id: 'inactive-provider');
 
     Environment::init(providers: [$active_provider, $inactive_provider]);
-    $this->assertEquals(Environment::PRODUCTION, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame(Environment::PRODUCTION, getenv('ENVIRONMENT_TYPE'));
   }
 
   public function testProviderReturningNullUsesFallback(): void {
     $null_provider = $this->mockProvider(NULL, TRUE, id: 'null-provider');
 
     Environment::init(fallback: Environment::PREVIEW, providers: [$null_provider]);
-    $this->assertEquals(Environment::PREVIEW, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame(Environment::PREVIEW, getenv('ENVIRONMENT_TYPE'));
   }
 
   public function testOverrideCallbackModifiesType(): void {
     $provider = $this->mockProvider(Environment::LOCAL, TRUE, id: 'override-test');
-    $override = function ($provider, $type): string {
-      return Environment::STAGE;
-    };
+    $override = (fn($provider, $type): string => Environment::STAGE);
 
     Environment::init(override: $override, providers: [$provider]);
-    $this->assertEquals(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
   }
 
   #[DataProvider('dataProviderIsEnvironmentTypeMethods')]
   public function testIsEnvironmentTypeMethods(string $env_type, array $expected_results): void {
-    static::envSet('ENVIRONMENT_TYPE', $env_type);
+    self::envSet('ENVIRONMENT_TYPE', $env_type);
 
     $this->assertEquals($expected_results['isLocal'], Environment::isLocal());
     $this->assertEquals($expected_results['isCi'], Environment::isCi());
@@ -160,10 +154,9 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
     $this->assertEquals($expected_results['isProd'], Environment::isProd());
   }
 
-  public static function dataProviderIsEnvironmentTypeMethods(): array {
-    return [
-      'local environment' => [
-        Environment::LOCAL,
+  public static function dataProviderIsEnvironmentTypeMethods(): \Iterator {
+    yield 'local environment' => [
+      Environment::LOCAL,
         [
           'isLocal' => TRUE,
           'isCi' => FALSE,
@@ -172,9 +165,9 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
           'isStage' => FALSE,
           'isProd' => FALSE,
         ],
-      ],
-      'ci environment' => [
-        Environment::CI,
+    ];
+    yield 'ci environment' => [
+      Environment::CI,
         [
           'isLocal' => FALSE,
           'isCi' => TRUE,
@@ -183,9 +176,9 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
           'isStage' => FALSE,
           'isProd' => FALSE,
         ],
-      ],
-      'development environment' => [
-        Environment::DEVELOPMENT,
+    ];
+    yield 'development environment' => [
+      Environment::DEVELOPMENT,
         [
           'isLocal' => FALSE,
           'isCi' => FALSE,
@@ -194,9 +187,9 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
           'isStage' => FALSE,
           'isProd' => FALSE,
         ],
-      ],
-      'preview environment' => [
-        Environment::PREVIEW,
+    ];
+    yield 'preview environment' => [
+      Environment::PREVIEW,
         [
           'isLocal' => FALSE,
           'isCi' => FALSE,
@@ -205,9 +198,9 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
           'isStage' => FALSE,
           'isProd' => FALSE,
         ],
-      ],
-      'stage environment' => [
-        Environment::STAGE,
+    ];
+    yield 'stage environment' => [
+      Environment::STAGE,
         [
           'isLocal' => FALSE,
           'isCi' => FALSE,
@@ -216,9 +209,9 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
           'isStage' => TRUE,
           'isProd' => FALSE,
         ],
-      ],
-      'production environment' => [
-        Environment::PRODUCTION,
+    ];
+    yield 'production environment' => [
+      Environment::PRODUCTION,
         [
           'isLocal' => FALSE,
           'isCi' => FALSE,
@@ -227,48 +220,43 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
           'isStage' => FALSE,
           'isProd' => TRUE,
         ],
-      ],
     ];
   }
 
   #[DataProvider('dataProviderIsMethodWithCustomTypes')]
   public function testIsMethodWithCustomTypes(string $env_type, string $test_type, bool $expected): void {
-    static::envSet('ENVIRONMENT_TYPE', $env_type);
-    $this->assertEquals($expected, Environment::is($test_type));
+    self::envSet('ENVIRONMENT_TYPE', $env_type);
+    $this->assertSame($expected, Environment::is($test_type));
   }
 
-  public static function dataProviderIsMethodWithCustomTypes(): array {
-    return [
-      'custom type matches' => ['custom-env', 'custom-env', TRUE],
-      'custom type does not match' => ['custom-env', 'different-env', FALSE],
-      'standard type matches custom' => [Environment::LOCAL, Environment::LOCAL, TRUE],
-      'standard type does not match custom' => [Environment::LOCAL, 'custom-env', FALSE],
-    ];
+  public static function dataProviderIsMethodWithCustomTypes(): \Iterator {
+    yield 'custom type matches' => ['custom-env', 'custom-env', TRUE];
+    yield 'custom type does not match' => ['custom-env', 'different-env', FALSE];
+    yield 'standard type matches custom' => [Environment::LOCAL, Environment::LOCAL, TRUE];
+    yield 'standard type does not match custom' => [Environment::LOCAL, 'custom-env', FALSE];
   }
 
   public function testReset(): void {
     Environment::init(fallback: Environment::STAGE);
-    $this->assertEquals(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
 
     Environment::reset();
-    static::envUnset('ENVIRONMENT_TYPE');
+    self::envUnset('ENVIRONMENT_TYPE');
 
     Environment::init();
-    $this->assertEquals(Environment::DEVELOPMENT, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame(Environment::DEVELOPMENT, getenv('ENVIRONMENT_TYPE'));
   }
 
   public function testResetAll(): void {
-    $override = function ($provider, $type): string {
-      return Environment::PRODUCTION;
-    };
+    $override = (fn($provider, $type): string => Environment::PRODUCTION);
     Environment::init(fallback: Environment::STAGE, override: $override);
-    $this->assertEquals(Environment::PRODUCTION, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame(Environment::PRODUCTION, getenv('ENVIRONMENT_TYPE'));
 
     Environment::reset(TRUE);
-    static::envUnset('ENVIRONMENT_TYPE');
+    self::envUnset('ENVIRONMENT_TYPE');
 
     Environment::init();
-    $this->assertEquals(Environment::DEVELOPMENT, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame(Environment::DEVELOPMENT, getenv('ENVIRONMENT_TYPE'));
   }
 
   public function testMultipleActiveProvidersException(): void {
@@ -367,15 +355,13 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
       contexts: [$mock_context]
     );
 
-    $this->assertEquals(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
   }
 
-  public static function dataProviderContextualization(): array {
-    return [
-      'contextualize true with active context' => [TRUE, TRUE, 1, 1],
-      'contextualize false with active context' => [FALSE, TRUE, 0, 0],
-      'contextualize true without active context' => [TRUE, FALSE, 0, 0],
-    ];
+  public static function dataProviderContextualization(): \Iterator {
+    yield 'contextualize true with active context' => [TRUE, TRUE, 1, 1];
+    yield 'contextualize false with active context' => [FALSE, TRUE, 0, 0];
+    yield 'contextualize true without active context' => [TRUE, FALSE, 0, 0];
   }
 
   #[DataProvider('dataProviderProviderTypes')]
@@ -384,19 +370,17 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
 
     Environment::init(fallback: $fallback, providers: [$provider]);
 
-    $this->assertEquals($expected, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame($expected, getenv('ENVIRONMENT_TYPE'));
   }
 
-  public static function dataProviderProviderTypes(): array {
-    return [
-      'provider returns local' => [Environment::LOCAL, Environment::DEVELOPMENT, Environment::LOCAL],
-      'provider returns ci' => [Environment::CI, Environment::DEVELOPMENT, Environment::CI],
-      'provider returns development' => [Environment::DEVELOPMENT, Environment::STAGE, Environment::DEVELOPMENT],
-      'provider returns preview' => [Environment::PREVIEW, Environment::DEVELOPMENT, Environment::PREVIEW],
-      'provider returns stage' => [Environment::STAGE, Environment::DEVELOPMENT, Environment::STAGE],
-      'provider returns production' => [Environment::PRODUCTION, Environment::DEVELOPMENT, Environment::PRODUCTION],
-      'provider returns null uses fallback' => [NULL, Environment::PREVIEW, Environment::PREVIEW],
-    ];
+  public static function dataProviderProviderTypes(): \Iterator {
+    yield 'provider returns local' => [Environment::LOCAL, Environment::DEVELOPMENT, Environment::LOCAL];
+    yield 'provider returns ci' => [Environment::CI, Environment::DEVELOPMENT, Environment::CI];
+    yield 'provider returns development' => [Environment::DEVELOPMENT, Environment::STAGE, Environment::DEVELOPMENT];
+    yield 'provider returns preview' => [Environment::PREVIEW, Environment::DEVELOPMENT, Environment::PREVIEW];
+    yield 'provider returns stage' => [Environment::STAGE, Environment::DEVELOPMENT, Environment::STAGE];
+    yield 'provider returns production' => [Environment::PRODUCTION, Environment::DEVELOPMENT, Environment::PRODUCTION];
+    yield 'provider returns null uses fallback' => [NULL, Environment::PREVIEW, Environment::PREVIEW];
   }
 
   public function testOverrideCallbackReceivesCorrectParameters(): void {
@@ -414,7 +398,7 @@ class EnvironmentTest extends EnvironmentDetectorTestCase {
 
     $this->assertSame($active_provider, $received_provider);
     $this->assertEquals(Environment::LOCAL, $received_type);
-    $this->assertEquals(Environment::PRODUCTION, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame(Environment::PRODUCTION, getenv('ENVIRONMENT_TYPE'));
   }
 
 }

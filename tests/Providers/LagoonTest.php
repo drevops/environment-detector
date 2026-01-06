@@ -11,31 +11,31 @@ use PHPUnit\Framework\Attributes\DataProvider;
 
 #[CoversClass(Lagoon::class)]
 #[CoversClass(Environment::class)]
-class LagoonTest extends ProviderTestCase {
+final class LagoonTest extends ProviderTestCase {
 
-  public static function dataProviderActive(): array {
+  public static function dataProviderActive(): \Iterator|array {
     return [
-      [fn(): null => NULL, FALSE],
-      [fn() => static::envSet('LAGOON_KUBERNETES', 'myproject'), TRUE],
-      [fn() => static::envSet('LAGOON_PROJECT', 'myproject'), FALSE],
+      yield [fn(): null => NULL, FALSE],
+      yield [fn() => self::envSet('LAGOON_KUBERNETES', 'myproject'), TRUE],
+      yield [fn() => self::envSet('LAGOON_PROJECT', 'myproject'), FALSE],
     ];
   }
 
-  public static function dataProviderData(): array {
+  public static function dataProviderData(): \Iterator|array {
     return [
-      [
+      yield [
         fn(): null => NULL,
         NULL,
       ],
-      [
-        fn(): null => static::envSetMultiple([
+      yield [
+        fn(): null => self::envSetMultiple([
           'LAGOON_PROJECT' => 'myproject',
         ]),
         NULL,
       ],
 
-      [
-        fn(): null => static::envSetMultiple([
+      yield [
+        fn(): null => self::envSetMultiple([
           'LAGOON_KUBERNETES' => 'myproject',
           'LAGOON_PROJECT' => 'myproject',
         ]),
@@ -45,8 +45,8 @@ class LagoonTest extends ProviderTestCase {
         ],
       ],
 
-      [
-        fn(): null => static::envSetMultiple([
+      yield [
+        fn(): null => self::envSetMultiple([
           'LAGOON_KUBERNETES' => 'myproject',
           'LAGOON_PROJECT' => 'myproject',
           'OTHER_VAR' => 'value',
@@ -161,15 +161,15 @@ class LagoonTest extends ProviderTestCase {
     foreach ($matrix as $item) {
       $data[implode(', ', $item)] = [
         function () use ($item): void {
-          static::envSet('LAGOON_KUBERNETES', 'myproject');
+          self::envSet('LAGOON_KUBERNETES', 'myproject');
           if ($item[0] !== 'unset') {
-            static::envSet('LAGOON_ENVIRONMENT_TYPE', $item[0]);
+            self::envSet('LAGOON_ENVIRONMENT_TYPE', $item[0]);
           }
           if ($item[1] !== 'unset') {
-            static::envSet('ENVIRONMENT_PRODUCTION_BRANCH', $item[1]);
+            self::envSet('ENVIRONMENT_PRODUCTION_BRANCH', $item[1]);
           }
           if ($item[2] !== 'unset') {
-            static::envSet('LAGOON_GIT_BRANCH', $item[2]);
+            self::envSet('LAGOON_GIT_BRANCH', $item[2]);
           }
         },
         $item[3],
@@ -183,7 +183,7 @@ class LagoonTest extends ProviderTestCase {
   public function testContextualizeDrupal(callable $before, array $expected, ?callable $after = NULL): void {
     $before();
 
-    static::envSet('LAGOON_KUBERNETES', 'myproject');
+    self::envSet('LAGOON_KUBERNETES', 'myproject');
     Environment::init();
 
     global $settings;
@@ -232,9 +232,9 @@ class LagoonTest extends ProviderTestCase {
           global $config;
           $settings = $default_settings;
           $config = $default_config;
-          static::envSet('LAGOON_ROUTES', 'http://example1.com,https://example2.com');
-          static::envSet('LAGOON_PROJECT', 'myproject');
-          static::envSet('LAGOON_GIT_SAFE_BRANCH', 'develop');
+          self::envSet('LAGOON_ROUTES', 'http://example1.com,https://example2.com');
+          self::envSet('LAGOON_PROJECT', 'myproject');
+          self::envSet('LAGOON_GIT_SAFE_BRANCH', 'develop');
         },
         [
           'settings' => array_merge_recursive([
@@ -256,9 +256,9 @@ class LagoonTest extends ProviderTestCase {
           global $config;
           $settings = $default_settings;
           $config = $default_config;
-          static::envSet('LAGOON_ROUTES', 'http://example1.com,https://example2/com');
-          static::envSet('LAGOON_PROJECT', 'myproject');
-          static::envSet('ENVIRONMENT_PRODUCTION_BRANCH', 'master');
+          self::envSet('LAGOON_ROUTES', 'http://example1.com,https://example2/com');
+          self::envSet('LAGOON_PROJECT', 'myproject');
+          self::envSet('ENVIRONMENT_PRODUCTION_BRANCH', 'master');
         },
         [
           'settings' => array_merge_recursive([

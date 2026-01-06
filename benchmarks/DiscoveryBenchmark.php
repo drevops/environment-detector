@@ -36,8 +36,8 @@ class DiscoveryBenchmark {
       $providers[] = new class($unique_id, 'Test Provider ' . $i) implements ProviderInterface {
 
         public function __construct(
-          private string $id,
-          private string $label,
+          private readonly string $id,
+          private readonly string $label,
         ) {
         }
 
@@ -100,8 +100,8 @@ class DiscoveryBenchmark {
       $contexts[] = new class($unique_id, 'Test Context ' . $i) implements ContextInterface {
 
         public function __construct(
-          private string $id,
-          private string $label,
+          private readonly string $id,
+          private readonly string $label,
         ) {
         }
 

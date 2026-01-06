@@ -30,11 +30,11 @@ abstract class ProviderTestCase extends EnvironmentDetectorTestCase {
     $before();
 
     if ($expect_equals) {
-      $this->assertEquals($this->providerId, Environment::getActiveProvider()?->id(), sprintf('Provider ID is %s', $this->providerId));
-      $this->assertNotEmpty(Environment::getActiveProvider()?->label() ?? '', 'Provider label is not empty');
+      $this->assertSame($this->providerId, Environment::getActiveProvider()?->id(), sprintf('Provider ID is %s', $this->providerId));
+      $this->assertNotEmpty(Environment::getActiveProvider()->label(), 'Provider label is not empty');
     }
     else {
-      $this->assertNotEquals($this->providerId, Environment::getActiveProvider()?->id(), sprintf('Provider ID is not %s', $this->providerId));
+      $this->assertNotSame($this->providerId, Environment::getActiveProvider()?->id(), sprintf('Provider ID is not %s', $this->providerId));
     }
 
     if ($after !== NULL) {
@@ -42,7 +42,7 @@ abstract class ProviderTestCase extends EnvironmentDetectorTestCase {
     }
   }
 
-  abstract public static function dataProviderActive(): array;
+  abstract public static function dataProviderActive(): \Iterator|array;
 
   #[DataProvider('dataProviderData')]
   public function testData(callable $before, ?array $expected, ?callable $after = NULL): void {
@@ -55,7 +55,7 @@ abstract class ProviderTestCase extends EnvironmentDetectorTestCase {
     }
   }
 
-  abstract public static function dataProviderData(): array;
+  abstract public static function dataProviderData(): \Iterator|array;
 
   #[DataProvider('dataProviderType')]
   public function testType(callable $before, ?string $expected, ?callable $after = NULL): void {
@@ -68,6 +68,6 @@ abstract class ProviderTestCase extends EnvironmentDetectorTestCase {
     }
   }
 
-  abstract public static function dataProviderType(): array;
+  abstract public static function dataProviderType(): \Iterator|array;
 
 }
