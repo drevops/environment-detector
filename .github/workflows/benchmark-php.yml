@@ -57,7 +57,7 @@ jobs:
           exit 1
 
       - name: Upload performance report as artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{github.job}}-performance-report
           path: |
