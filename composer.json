@@ -28,7 +28,7 @@
         "opis/closure": "^4.0",
         "phpbench/phpbench": "^1.4",
         "phpstan/phpstan": "^2",
-        "phpunit/phpunit": "^12",
+        "phpunit/phpunit": "^13",
         "rector/rector": "^2",
         "skpr/config": "^3.0"
     },
