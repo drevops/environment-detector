@@ -23,7 +23,7 @@
         "alexskrypnyk/phpunit-helpers": "^0.15.0",
         "dealerdirect/phpcodesniffer-composer-installer": "^1",
         "drevops/phpcs-standard": "^0.7.0",
-        "drupal/coder": "^8.3",
+        "drupal/coder": "^9.0",
         "ergebnis/composer-normalize": "^2.42",
         "opis/closure": "^4.0",
         "phpbench/phpbench": "^1.4",
