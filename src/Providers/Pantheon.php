@@ -38,7 +38,7 @@ class Pantheon extends AbstractProvider {
   public function active(): bool {
     // Some local development environments may inject the PANTHEON_ENVIRONMENT.
     // @see https://docs.lando.dev/plugins/pantheon/v/v1.8.0/environment.html
-    return getenv('PANTHEON_ENVIRONMENT') !== FALSE && !in_array(getenv('PANTHEON_ENVIRONMENT'), ['ddev', 'lando']);
+    return getenv('PANTHEON_ENVIRONMENT') !== FALSE && !in_array(getenv('PANTHEON_ENVIRONMENT'), ['ddev', 'lando'], TRUE);
   }
 
   /**
