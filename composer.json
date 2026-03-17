@@ -17,20 +17,20 @@
         "source": "https://github.com/drevops/environment-detector"
     },
     "require": {
-        "php": ">=8.2"
+        "php": ">=8.5.4"
     },
     "require-dev": {
         "alexskrypnyk/phpunit-helpers": "^0.15.0",
         "dealerdirect/phpcodesniffer-composer-installer": "^1",
         "drevops/phpcs-standard": "^0.7.0",
-        "drupal/coder": "^8.3",
-        "ergebnis/composer-normalize": "^2.42",
-        "opis/closure": "^4.0",
-        "phpbench/phpbench": "^1.4",
+        "drupal/coder": "^8.3.31",
+        "ergebnis/composer-normalize": "^2.50.0",
+        "opis/closure": "^4.5.0",
+        "phpbench/phpbench": "^1.5.1",
         "phpstan/phpstan": "^2",
         "phpunit/phpunit": "^12",
         "rector/rector": "^2",
-        "skpr/config": "^3.0"
+        "skpr/config": "^3.0.2"
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
