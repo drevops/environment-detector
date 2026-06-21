@@ -16,7 +16,7 @@ class InitBenchmark {
   }
 
   /**
-   * Data provider for the `provideInitRepeated` benchmark.
+   * Benchmark repeated type checks after init.
    *
    * @param array<string,int|bool> $params
    *   An array of parameters.

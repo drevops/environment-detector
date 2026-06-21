@@ -9,7 +9,7 @@ use DrevOps\EnvironmentDetector\Environment;
 /**
  * Docker (vanilla) provider.
  *
- * Detects the DDEV environment type.
+ * Detects the Docker environment type.
  *
  * @package DrevOps\EnvironmentDetector\Providers
  */

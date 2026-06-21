@@ -51,15 +51,15 @@ use DrevOps\EnvironmentDetector\Providers\ProviderInterface;
  * returns NULL. In this case, the fallback environment type is used.
  * The fallback environment type can be overridden using the ::setFallback()
  * method.
- * The default fallback environment type is Environment::DEV - this is to make
- * sure that, in case of misconfiguration, the application does not apply local
- * settings in production or production settings in local - 'dev' type is
- * the safest default.
+ * The default fallback environment type is Environment::DEVELOPMENT - this is
+ * to make sure that, in case of misconfiguration, the application does not
+ * apply local settings in production or production settings in local -
+ * 'development' type is the safest default.
  *
  * The discovered type is statically cached to be performant. The cache can be
- * reset using the ::reset() method, which will reset the detected type and the
- * active provider, but will preserver the registered providers.
- * Call ::reset(TRUE) to reset all registered providers as well.
+ * reset using the ::reset() method, which resets the active provider and
+ * context and the registered providers and contexts. Call ::reset(TRUE) to
+ * also reset the fallback type and the override callback.
  *
  * ** Contexts **
  *
@@ -120,7 +120,7 @@ use DrevOps\EnvironmentDetector\Providers\ProviderInterface;
  * Environment::init(
  *   contextualize: TRUE,                             // Whether to apply the context automatically when the environment type is requested.
  *   fallback: Environment::DEVELOPMENT               // The fallback environment type.
- *   override_callback: function($provider, $type) {  // The override callback to change the environment type.
+ *   override: function($provider, $type) {           // The override callback to change the environment type.
  *     // Custom logic to override the detected environment type.
  *    return $type;
  *   }
@@ -299,7 +299,7 @@ class Environment {
    * Environment::init(
    *   contextualize: TRUE,                             // Whether to apply the context automatically when the environment type is requested.
    *   fallback: Environment::DEVELOPMENT               // The fallback environment type.
-   *   override_callback: function($provider, $type) {  // The override callback to change the environment type.
+   *   override: function($provider, $type) {           // The override callback to change the environment type.
    *     // Custom logic to override the detected environment type.
    *    return $type;
    *   },
@@ -416,8 +416,6 @@ class Environment {
       $active = NULL;
 
       // Ensure at most one active provider exists.
-      // Stop checking as soon as more than one is detected to avoid unnecessary
-      // evaluations.
       $providers = static::collectProviders();
       foreach ($providers as $provider) {
         if ($provider->active()) {
@@ -509,8 +507,6 @@ class Environment {
       $active = NULL;
 
       // Ensure at most one active context exists.
-      // Stop checking as soon as more than one is detected to avoid unnecessary
-      // evaluations.
       $contexts = static::collectContexts();
       foreach ($contexts as $context) {
         if ($context->active()) {

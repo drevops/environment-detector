@@ -18,7 +18,6 @@ class Lagoon extends AbstractProvider {
   /**
    * {@inheritdoc}
    */
-
   public const ID = 'lagoon';
 
   /**
@@ -46,7 +45,6 @@ class Lagoon extends AbstractProvider {
   public function type(): ?string {
     $type = NULL;
 
-    // Environment is marked as 'production'.
     if (getenv('LAGOON_ENVIRONMENT_TYPE') == 'production') {
       $type = Environment::PRODUCTION;
     }
@@ -81,8 +79,6 @@ class Lagoon extends AbstractProvider {
 
     // Lagoon reverse proxy settings.
     $settings['reverse_proxy'] = TRUE;
-
-    // Reverse proxy settings.
     $settings['reverse_proxy_header'] = 'HTTP_TRUE_CLIENT_IP';
 
     // Cache prefix.

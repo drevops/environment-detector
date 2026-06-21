@@ -14,12 +14,12 @@ namespace DrevOps\EnvironmentDetector\Contexts;
 abstract class AbstractContext implements ContextInterface {
 
   /**
-   * Context ID. Provers should override this constant.
+   * Context ID. Contexts should override this constant.
    */
   public const ID = 'undefined';
 
   /**
-   * Context label. Provers should override this constant.
+   * Context label. Contexts should override this constant.
    */
   public const LABEL = 'undefined';
 

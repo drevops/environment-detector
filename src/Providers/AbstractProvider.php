@@ -26,7 +26,7 @@ abstract class AbstractProvider implements ProviderInterface {
   public const LABEL = 'undefined';
 
   /**
-   * Environment variables prefix. Providers should override this constant.
+   * Get the environment variable prefixes used by the provider.
    *
    * @return array<string>
    *   The list of environment variable prefixes used by the provider.
