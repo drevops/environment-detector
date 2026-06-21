@@ -16,7 +16,7 @@ class DiscoveryBenchmark {
   }
 
   /**
-   * Data provider for the `benchAddProvider` benchmark.
+   * Benchmark registering custom providers.
    *
    * @param array<string,int> $params
    *   An array of parameters.
@@ -80,7 +80,7 @@ class DiscoveryBenchmark {
   }
 
   /**
-   * Data provider for the `benchAddContext` benchmark.
+   * Benchmark registering custom contexts.
    *
    * @param array<string,int> $params
    *   An array of parameters.

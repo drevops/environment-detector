@@ -8,7 +8,7 @@ namespace DrevOps\EnvironmentDetector\Contexts;
  * Context interface.
  *
  * Context is a framework/CMS that runs in the environment. Once the context is
- * detected, it can be used to conextualize (apply changes) to the running
+ * detected, it can be used to contextualize (apply changes) to the running
  * environment. This can include setting environment variables, changing
  * configuration files, etc.
  *
