@@ -48,6 +48,8 @@ final class DockerTest extends StackTestCase {
     self::envSet('DOCKER', 'TRUE');
     self::envSet('IS_DDEV_PROJECT', 'TRUE');
 
+    Environment::init(contextualize: FALSE);
+
     $active_ids = array_map(static fn(StackInterface $stack): string => $stack->id(), Environment::getActiveStacks());
 
     $this->assertContains('docker', $active_ids);
