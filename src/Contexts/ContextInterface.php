@@ -25,14 +25,6 @@ interface ContextInterface {
   public function id(): string;
 
   /**
-   * Get the context label.
-   *
-   * @return string
-   *   The context label.
-   */
-  public function label(): string;
-
-  /**
    * Check if the context is active.
    *
    * Any required data _could_ be passed in as an argument, but better to use

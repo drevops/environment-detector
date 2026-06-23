@@ -4,83 +4,75 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector;
 
-use DrevOps\EnvironmentDetector\Providers\Acquia;
-use DrevOps\EnvironmentDetector\Providers\CircleCi;
-use DrevOps\EnvironmentDetector\Providers\Ddev;
-use DrevOps\EnvironmentDetector\Providers\Docker;
-use DrevOps\EnvironmentDetector\Providers\GitHubActions;
-use DrevOps\EnvironmentDetector\Providers\GitLabCi;
-use DrevOps\EnvironmentDetector\Providers\Lagoon;
-use DrevOps\EnvironmentDetector\Providers\Lando;
-use DrevOps\EnvironmentDetector\Providers\Pantheon;
-use DrevOps\EnvironmentDetector\Providers\PlatformSh;
-use DrevOps\EnvironmentDetector\Providers\Skpr;
-use DrevOps\EnvironmentDetector\Providers\Tugboat;
-use DrevOps\EnvironmentDetector\Contexts\Drupal;
 use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
-use DrevOps\EnvironmentDetector\Providers\ProviderInterface;
+use DrevOps\EnvironmentDetector\Contexts\Drupal;
+use DrevOps\EnvironmentDetector\Platforms\Acquia;
+use DrevOps\EnvironmentDetector\Platforms\CircleCi;
+use DrevOps\EnvironmentDetector\Platforms\GitHubActions;
+use DrevOps\EnvironmentDetector\Platforms\GitLabCi;
+use DrevOps\EnvironmentDetector\Platforms\Lagoon;
+use DrevOps\EnvironmentDetector\Platforms\Pantheon;
+use DrevOps\EnvironmentDetector\Platforms\PlatformInterface;
+use DrevOps\EnvironmentDetector\Platforms\PlatformSh;
+use DrevOps\EnvironmentDetector\Platforms\Skpr;
+use DrevOps\EnvironmentDetector\Platforms\Tugboat;
+use DrevOps\EnvironmentDetector\Stacks\Ddev;
+use DrevOps\EnvironmentDetector\Stacks\Docker;
+use DrevOps\EnvironmentDetector\Stacks\Lando;
+use DrevOps\EnvironmentDetector\Stacks\StackInterface;
 
 /**
  * Universal environment detector.
  *
- * Detects the environment type based on the registered providers. This package
- * provides a set of built-in providers, but custom providers can be added as
- * well. This package also provides a set of built-in contexts (frameworks,
- * CMSs, configs etc.) that can be used to update the application.
+ * Detects the environment type using nested detector rings. A run wraps from an
+ * outer ring down to the application: a platform contains a stack, which
+ * contains the runtime, which contains the application context. This package
+ * ships built-in platforms and stacks, but custom ones can be added too.
  *
- * ** Providers **
+ * ** Platforms **
  *
- * The environment type is determined by the "active" provider - a registered
- * provider that has detected the current environment using its own logic.
- * Only one provider can be active at a time (otherwise an exception is thrown).
+ * A platform is the outermost ring - the hosting provider (Acquia, Lagoon, ...)
+ * or the CI service (GitHub Actions, ...). It is the ONLY ring that carries the
+ * environment type. The type is read off the "active" platform - a registered
+ * platform that has detected the current environment using its own logic. At
+ * most one platform can be active at a time; two active platforms is a genuine
+ * misconfiguration and throws. Add a custom platform via ::init(platforms: ...)
+ * to register a class implementing PlatformInterface.
  *
- * If no provider is active an exception is thrown. This is to ensure that the
- * environment type is always detected and that the application does not run
- * with an unknown environment type. Add a custom provider using ::addProvider()
- * to register a new provider implementing ProviderInterface.
+ * If no platform is active, the type is `ci` when a generic `CI` signal is
+ * present, otherwise `local` - an empty outer ring means the run is local.
  *
- * The environment type returned by a provider can be overridden by a callback
- * set using the ::setOverride() method. The callback will receive the
- * currently active provider, and the currently discovered environment type as
- * arguments. This allows to add custom types and override the detected type
- * based on the custom logic. The advantage of such an approach is that the
- * active provider is still discovered using the provider's own logic, and the
- * override callback is used only to change the environment type.
+ * If an active platform cannot determine the environment type, it returns NULL.
+ * In this case, the fallback environment type is used. The default fallback is
+ * Environment::DEVELOPMENT - this makes sure that, in case of misconfiguration,
+ * the application does not apply local settings in production or production
+ * settings in local; 'development' is the safest default.
  *
- * If an active provider is not able to determine the environment type, it
- * returns NULL. In this case, the fallback environment type is used.
- * The fallback environment type can be overridden using the ::setFallback()
- * method.
- * The default fallback environment type is Environment::DEVELOPMENT - this is
- * to make sure that, in case of misconfiguration, the application does not
- * apply local settings in production or production settings in local -
- * 'development' type is the safest default.
+ * ** Stacks **
  *
- * The discovered type is statically cached to be performant. The cache can be
- * reset using the ::reset() method, which resets the active provider and
- * context and the registered providers and contexts. Call ::reset(TRUE) to
- * also reset the fallback type and the override callback.
+ * A stack is an inner ring - the substrate the environment runs in (Docker,
+ * DDEV, Lando). Stacks never carry the environment type and never collide with
+ * a platform: Docker inside Acquia or Lando inside CI are just inner rings.
+ * Multiple stacks can be active at the same time. Each active stack may
+ * contribute settings to the active context.
  *
  * ** Contexts **
  *
- * Contexts are used to apply environment-specific changes to the application.
- *
- * The active context is determined by the "active" context - a registered
- * context that has detected the current context using its own logic.
- *
- * A context may provide generic changes that are applied to the application.
- * A provider may provide provider-specific context changes that are applied to
- * the application as well.
- *
- * For example, a Drupal context applies the changes to the global $settings
- * array, while a Lagoon provider's contextualize() method adds more
- * Lagoon-specific changes to the $settings array. In this case, Acquia Cloud
- * provider provides their own Acquia Cloud-specific changes to the $settings
- * array.
+ * Contexts are the application/framework where settings land. A context applies
+ * generic changes to the application; the active platform and every active
+ * stack may then apply their own context-specific changes. For example, a
+ * Drupal context applies changes to the global $settings array, while the
+ * Lagoon platform's contextualize() adds Lagoon-specific changes to the same
+ * array. At most one context can be active at a time.
  *
  * The goal of this package is to have enough context changes to cover the most
  * common use cases, but also to allow adding custom contexts to cover the
  * specific use cases within the application.
+ *
+ * The discovered type is statically cached to be performant. The cache can be
+ * reset using the ::reset() method, which resets the active platform, stacks
+ * and context and the registered platforms, stacks and contexts. Call
+ * ::reset(TRUE) to also reset the fallback type.
  *
  * ** ENVIRONMENT_TYPE **
  *
@@ -119,11 +111,10 @@ use DrevOps\EnvironmentDetector\Providers\ProviderInterface;
  * @code
  * Environment::init(
  *   contextualize: TRUE,                             // Whether to apply the context automatically when the environment type is requested.
- *   fallback: Environment::DEVELOPMENT               // The fallback environment type.
- *   override: function($provider, $type) {           // The override callback to change the environment type.
- *     // Custom logic to override the detected environment type.
- *    return $type;
- *   }
+ *   fallback: Environment::DEVELOPMENT,              // The fallback environment type.
+ *   platforms: [MyCustomPlatform::class],            // An array of additional platform classes to register.
+ *   stacks: [MyCustomStack::class],                  // An array of additional stack classes to register.
+ *   contexts: [MyCustomContext::class],              // An array of additional context classes to register.
  * );
  * if (getenv('ENVIRONMENT_TYPE') === Environment::LOCAL) {  // Use the `ENVIRONMENT_TYPE` env var as needed.
  *   // Apply local settings.
@@ -165,23 +156,31 @@ class Environment {
   public const PRODUCTION = 'production';
 
   /**
-   * Pre-defined provider classes.
+   * Pre-defined platform classes.
    *
    * @var array<string>
    */
-  protected const PROVIDERS = [
+  protected const PLATFORMS = [
     Acquia::class,
     CircleCi::class,
-    Ddev::class,
-    Docker::class,
     GitHubActions::class,
     GitLabCi::class,
     Lagoon::class,
-    Lando::class,
     Pantheon::class,
     PlatformSh::class,
     Skpr::class,
     Tugboat::class,
+  ];
+
+  /**
+   * Pre-defined stack classes.
+   *
+   * @var array<string>
+   */
+  protected const STACKS = [
+    Docker::class,
+    Ddev::class,
+    Lando::class,
   ];
 
   /**
@@ -199,21 +198,23 @@ class Environment {
   protected static string $fallback = self::DEVELOPMENT;
 
   /**
-   * The override callback to change the environment type.
+   * The "active" platform. Only one platform can be active at a time.
    */
-  protected static mixed $override = NULL;
+  protected static ?PlatformInterface $platform = NULL;
 
   /**
-   * The "active" provider. Only one provider can be active at a time.
-   */
-  protected static ?ProviderInterface $provider = NULL;
-
-  /**
-   * The list of registered providers.
+   * The list of registered platforms.
    *
-   * @var \DrevOps\EnvironmentDetector\Providers\ProviderInterface[]|null
+   * @var \DrevOps\EnvironmentDetector\Platforms\PlatformInterface[]|null
    */
-  protected static ?array $providers = NULL;
+  protected static ?array $platforms = NULL;
+
+  /**
+   * The list of registered stacks.
+   *
+   * @var \DrevOps\EnvironmentDetector\Stacks\StackInterface[]|null
+   */
+  protected static ?array $stacks = NULL;
 
   /**
    * The "active" context. Only one context can be active at a time.
@@ -298,12 +299,9 @@ class Environment {
    * @code
    * Environment::init(
    *   contextualize: TRUE,                             // Whether to apply the context automatically when the environment type is requested.
-   *   fallback: Environment::DEVELOPMENT               // The fallback environment type.
-   *   override: function($provider, $type) {           // The override callback to change the environment type.
-   *     // Custom logic to override the detected environment type.
-   *    return $type;
-   *   },
-   *   providers: [MyCustomProvider::class],            // An array of additional provider classes to register.
+   *   fallback: Environment::DEVELOPMENT,              // The fallback environment type.
+   *   platforms: [MyCustomPlatform::class],            // An array of additional platform classes to register.
+   *   stacks: [MyCustomStack::class],                  // An array of additional stack classes to register.
    *   contexts: [MyCustomContext::class],              // An array of additional context classes to register.
    * );
    * @endcode
@@ -313,26 +311,20 @@ class Environment {
    *   requested. Set to FALSE to prevent automatic contextualization. In this
    *   case, call ::contextualize() manually to apply the context.
    * @param string $fallback
-   *   The fallback environment type to use if the active provider is not able
+   *   The fallback environment type to use if the active platform is not able
    *   to determine the environment type. Default is Environment::DEVELOPMENT.
-   * @param callable|array<mixed,string>|null $override
-   *   The override callback to change the environment type. The callback will
-   *   receive the currently active provider, and the currently discovered
-   *   environment type as arguments. This allows to add custom types and
-   *   override the detected type based on the custom logic. The advantage of
-   *   such an approach is that the active provider is still discovered using
-   *   the provider's own logic, and the override callback is used only to
-   *   change the environment type.
-   * @param array<int,\DrevOps\EnvironmentDetector\Providers\ProviderInterface> $providers
-   *   An array of additional provider classes to register.
+   * @param array<int,\DrevOps\EnvironmentDetector\Platforms\PlatformInterface> $platforms
+   *   An array of additional platform classes to register.
+   * @param array<int,\DrevOps\EnvironmentDetector\Stacks\StackInterface> $stacks
+   *   An array of additional stack classes to register.
    * @param array<int,\DrevOps\EnvironmentDetector\Contexts\ContextInterface> $contexts
    *   An array of additional context classes to register.
    */
   public static function init(
     bool $contextualize = TRUE,
     string $fallback = self::DEVELOPMENT,
-    callable|array|null $override = NULL,
-    array $providers = [],
+    array $platforms = [],
+    array $stacks = [],
     array $contexts = [],
   ): void {
     if (static::$isInitialized) {
@@ -341,14 +333,8 @@ class Environment {
 
     static::$fallback = $fallback;
 
-    if ($override) {
-      if (!is_callable($override)) {
-        throw new \InvalidArgumentException('The callback must be callable');
-      }
-      static::$override = $override;
-    }
-
-    static::collectProviders($providers);
+    static::collectPlatforms($platforms);
+    static::collectStacks($stacks);
     static::collectContexts($contexts);
 
     static::discoverType();
@@ -367,15 +353,15 @@ class Environment {
    *   Whether to reset all settings.
    */
   public static function reset(bool $all = FALSE): void {
-    static::$provider = NULL;
+    static::$platform = NULL;
+    static::$platforms = NULL;
+    static::$stacks = NULL;
     static::$context = NULL;
-    static::$providers = NULL;
     static::$contexts = NULL;
     static::$isInitialized = FALSE;
 
     if ($all) {
       static::$fallback = self::DEVELOPMENT;
-      static::$override = NULL;
     }
   }
 
@@ -391,13 +377,14 @@ class Environment {
     $type = getenv('ENVIRONMENT_TYPE');
 
     if (!$type) {
-      $type = static::getActiveProvider()?->type();
+      $platform = static::getActivePlatform();
 
-      if (static::$override && is_callable(static::$override)) {
-        $type = (static::$override)(static::$provider, $type);
+      if ($platform instanceof PlatformInterface) {
+        $type = $platform->type() ?: static::$fallback;
       }
-
-      $type = $type ?: static::$fallback;
+      else {
+        $type = getenv('CI') ? self::CI : self::LOCAL;
+      }
 
       putenv('ENVIRONMENT_TYPE=' . $type);
     }
@@ -406,81 +393,138 @@ class Environment {
   }
 
   /**
-   * Get the active provider.
+   * Get the active platform.
    *
-   * @return \DrevOps\EnvironmentDetector\Providers\ProviderInterface
-   *   The active provider.
+   * @return \DrevOps\EnvironmentDetector\Platforms\PlatformInterface|null
+   *   The active platform or NULL if none is active.
    */
-  public static function getActiveProvider(): ?ProviderInterface {
-    if (!static::$provider instanceof ProviderInterface) {
+  public static function getActivePlatform(): ?PlatformInterface {
+    if (!static::$platform instanceof PlatformInterface) {
       $active = NULL;
 
-      // Ensure at most one active provider exists.
-      $providers = static::collectProviders();
-      foreach ($providers as $provider) {
-        if ($provider->active()) {
+      // Ensure at most one active platform exists.
+      foreach (static::collectPlatforms() as $platform) {
+        if ($platform->active()) {
           if ($active !== NULL) {
-            throw new \Exception('Multiple active environment providers detected: ' . $active->id() . ' and ' . $provider->id());
+            throw new \Exception('Multiple active environment platforms detected: ' . $active->id() . ' and ' . $platform->id());
           }
-          $active = $provider;
+          $active = $platform;
         }
       }
 
-      static::$provider = $active;
+      static::$platform = $active;
     }
 
-    return static::$provider;
+    return static::$platform;
   }
 
   /**
-   * Get the list of registered providers.
+   * Get the active stacks.
    *
-   * @param array<int,\DrevOps\EnvironmentDetector\Providers\ProviderInterface> $additional
-   *   An array of additional provider classes to register.
-   *
-   * @return \DrevOps\EnvironmentDetector\Providers\ProviderInterface[]
-   *   An array of registered providers.
+   * @return \DrevOps\EnvironmentDetector\Stacks\StackInterface[]
+   *   An array of active stacks.
    */
-  protected static function collectProviders(array $additional = []): array {
-    if (!static::$providers) {
-      static::$providers = [];
+  public static function getActiveStacks(): array {
+    return array_values(array_filter(static::collectStacks(), static fn(StackInterface $stack): bool => $stack->active()));
+  }
 
-      $instances = array_merge(self::PROVIDERS, $additional);
+  /**
+   * Get the list of registered platforms.
+   *
+   * @param array<int,\DrevOps\EnvironmentDetector\Platforms\PlatformInterface> $additional
+   *   An array of additional platform classes to register.
+   *
+   * @return \DrevOps\EnvironmentDetector\Platforms\PlatformInterface[]
+   *   An array of registered platforms.
+   */
+  protected static function collectPlatforms(array $additional = []): array {
+    if (!static::$platforms) {
+      static::$platforms = [];
+
+      $instances = array_merge(self::PLATFORMS, $additional);
 
       foreach ($instances as $instance) {
         $instance = is_string($instance) ? new $instance() : $instance;
 
-        if (!($instance instanceof ProviderInterface)) {
-          throw new \InvalidArgumentException('The provider must implement ProviderInterface');
+        if (!($instance instanceof PlatformInterface)) {
+          throw new \InvalidArgumentException('The platform must implement PlatformInterface');
         }
 
-        static::addProvider($instance);
+        static::addPlatform($instance);
       }
 
-      static::$providers ??= [];
+      static::$platforms ??= [];
     }
 
-    return static::$providers;
+    return static::$platforms;
   }
 
   /**
-   * Add a custom provider.
+   * Add a custom platform.
    *
-   * @param \DrevOps\EnvironmentDetector\Providers\ProviderInterface $provider
-   *   The provider to add.
+   * @param \DrevOps\EnvironmentDetector\Platforms\PlatformInterface $platform
+   *   The platform to add.
    *
    * @throws \InvalidArgumentException
-   *   If a provider with the same ID is already registered.
+   *   If a platform with the same ID is already registered.
    */
-  protected static function addProvider(ProviderInterface $provider): void {
-    if (array_key_exists($provider->id(), static::$providers ?? [])) {
-      throw new \InvalidArgumentException(sprintf('Provider with ID "%s" is already registered', $provider->id()));
+  protected static function addPlatform(PlatformInterface $platform): void {
+    if (array_key_exists($platform->id(), static::$platforms ?? [])) {
+      throw new \InvalidArgumentException(sprintf('Platform with ID "%s" is already registered', $platform->id()));
     }
 
-    static::$providers[$provider->id()] = $provider;
-    // Reset the detected environment type to make sure it is recalculated
-    // based on the new provider.
-    static::$provider = NULL;
+    static::$platforms[$platform->id()] = $platform;
+    // Reset the active platform to make sure it is recalculated based on the
+    // new platform.
+    static::$platform = NULL;
+  }
+
+  /**
+   * Get the list of registered stacks.
+   *
+   * @param array<int,\DrevOps\EnvironmentDetector\Stacks\StackInterface> $additional
+   *   An array of additional stack classes to register.
+   *
+   * @return \DrevOps\EnvironmentDetector\Stacks\StackInterface[]
+   *   An array of registered stacks.
+   */
+  protected static function collectStacks(array $additional = []): array {
+    if (!static::$stacks) {
+      static::$stacks = [];
+
+      $instances = array_merge(self::STACKS, $additional);
+
+      foreach ($instances as $instance) {
+        $instance = is_string($instance) ? new $instance() : $instance;
+
+        if (!($instance instanceof StackInterface)) {
+          throw new \InvalidArgumentException('The stack must implement StackInterface');
+        }
+
+        static::addStack($instance);
+      }
+
+      static::$stacks ??= [];
+    }
+
+    return static::$stacks;
+  }
+
+  /**
+   * Add a custom stack.
+   *
+   * @param \DrevOps\EnvironmentDetector\Stacks\StackInterface $stack
+   *   The stack to add.
+   *
+   * @throws \InvalidArgumentException
+   *   If a stack with the same ID is already registered.
+   */
+  protected static function addStack(StackInterface $stack): void {
+    if (array_key_exists($stack->id(), static::$stacks ?? [])) {
+      throw new \InvalidArgumentException(sprintf('Stack with ID "%s" is already registered', $stack->id()));
+    }
+
+    static::$stacks[$stack->id()] = $stack;
   }
 
   /**
@@ -491,24 +535,27 @@ class Environment {
     if ($context instanceof ContextInterface) {
       // Apply generic context changes.
       $context->contextualize();
-      // Apply provider-specific context changes.
-      static::getActiveProvider()?->contextualize($context);
+      // Apply platform-specific context changes.
+      static::getActivePlatform()?->contextualize($context);
+      // Apply stack-specific context changes.
+      foreach (static::getActiveStacks() as $stack) {
+        $stack->contextualize($context);
+      }
     }
   }
 
   /**
    * Get the active context.
    *
-   * @return \DrevOps\EnvironmentDetector\Contexts\ContextInterface
-   *   The active context.
+   * @return \DrevOps\EnvironmentDetector\Contexts\ContextInterface|null
+   *   The active context or NULL if none is active.
    */
   public static function getActiveContext(): ?ContextInterface {
     if (!static::$context instanceof ContextInterface) {
       $active = NULL;
 
       // Ensure at most one active context exists.
-      $contexts = static::collectContexts();
-      foreach ($contexts as $context) {
+      foreach (static::collectContexts() as $context) {
         if ($context->active()) {
           if ($active !== NULL) {
             throw new \Exception('Multiple active contexts detected: ' . $active->id() . ' and ' . $context->id());
@@ -580,13 +627,13 @@ class Environment {
   // phpcs:disable Drupal.Commenting.FunctionComment.WrongStyle
   // phpcs:disable Squiz.WhiteSpace.FunctionSpacing.After
   // @codeCoverageIgnoreStart
-  private function __construct() {
+  protected function __construct() {
   }
 
   /**
    * Prevent cloning this class.
    */
-  private function __clone() {
+  protected function __clone() {
   }
   // @codeCoverageIgnoreEnd
   // phpcs:enable DrupalPractice.Commenting.CommentEmptyLine.SpacingAfter

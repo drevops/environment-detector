@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Tests;
 
+use DrevOps\EnvironmentDetector\Stacks\StackInterface;
 use DrevOps\EnvironmentDetector\Contexts\AbstractContext;
 use DrevOps\EnvironmentDetector\Environment;
-use DrevOps\EnvironmentDetector\Providers\AbstractProvider;
+use DrevOps\EnvironmentDetector\Platforms\AbstractPlatform;
+use DrevOps\EnvironmentDetector\Stacks\AbstractStack;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 #[CoversClass(Environment::class)]
-#[CoversClass(AbstractProvider::class)]
+#[CoversClass(AbstractPlatform::class)]
+#[CoversClass(AbstractStack::class)]
 #[CoversClass(AbstractContext::class)]
 final class EnvironmentTest extends EnvironmentDetectorTestCase {
 
@@ -24,122 +27,277 @@ final class EnvironmentTest extends EnvironmentDetectorTestCase {
     $this->assertSame('production', Environment::PRODUCTION);
   }
 
-  #[DataProvider('dataProviderEnvironmentTypeDetection')]
-  public function testEnvironmentTypeDetection(?string $env_var, string $expected, array $providers, ?callable $override, string $fallback): void {
-    if ($env_var !== NULL) {
-      self::envSet('ENVIRONMENT_TYPE', $env_var);
-    }
+  public function testPresetEnvironmentTypeWins(): void {
+    self::envSet('ENVIRONMENT_TYPE', Environment::PRODUCTION);
 
-    Environment::init(
-      contextualize: FALSE,
-      fallback: $fallback,
-      override: $override,
-      providers: $providers
-    );
+    $platform = $this->mockPlatform(Environment::LOCAL, TRUE, id: 'preset-platform');
+
+    Environment::init(contextualize: FALSE, platforms: [$platform]);
+
+    $this->assertSame(Environment::PRODUCTION, getenv('ENVIRONMENT_TYPE'));
+  }
+
+  public function testActivePlatformDecidesType(): void {
+    $active_platform = $this->mockPlatform(Environment::PRODUCTION, TRUE, id: 'active-platform');
+    $inactive_platform = $this->mockPlatform(Environment::LOCAL, FALSE, id: 'inactive-platform');
+
+    Environment::init(platforms: [$active_platform, $inactive_platform]);
+
+    $this->assertSame(Environment::PRODUCTION, getenv('ENVIRONMENT_TYPE'));
+  }
+
+  public function testActivePlatformWithNullTypeUsesFallback(): void {
+    $null_platform = $this->mockPlatform(NULL, TRUE, id: 'null-platform');
+
+    Environment::init(fallback: Environment::PREVIEW, platforms: [$null_platform]);
+
+    $this->assertSame(Environment::PREVIEW, getenv('ENVIRONMENT_TYPE'));
+  }
+
+  public function testNoPlatformWithCiSignalIsCi(): void {
+    self::envSet('CI', 'TRUE');
+
+    Environment::init(contextualize: FALSE, platforms: []);
+
+    $this->assertSame(Environment::CI, getenv('ENVIRONMENT_TYPE'));
+  }
+
+  public function testNoPlatformWithoutCiSignalIsLocal(): void {
+    Environment::init(contextualize: FALSE, platforms: []);
+
+    $this->assertSame(Environment::LOCAL, getenv('ENVIRONMENT_TYPE'));
+  }
+
+  #[DataProvider('dataProviderPlatformTypes')]
+  public function testPlatformTypes(?string $platform_type, string $fallback, string $expected): void {
+    $platform = $this->mockPlatform($platform_type, TRUE, id: 'type-test-platform');
+
+    Environment::init(fallback: $fallback, platforms: [$platform]);
 
     $this->assertSame($expected, getenv('ENVIRONMENT_TYPE'));
   }
 
-  public static function dataProviderEnvironmentTypeDetection(): \Iterator {
-    yield 'pre-set env var' => [
-      Environment::PRODUCTION,
-      Environment::PRODUCTION,
-        [],
-      NULL,
-      Environment::DEVELOPMENT,
-    ];
-    yield 'fallback when no providers' => [
-      NULL,
-      Environment::PREVIEW,
-        [],
-      NULL,
-      Environment::PREVIEW,
-    ];
-    yield 'override callback changes type' => [
-      NULL,
-      Environment::CI,
-        [],
-      fn($provider, $type): string => Environment::CI,
-      Environment::DEVELOPMENT,
-    ];
-    yield 'override callback returning null uses fallback' => [
-      NULL,
-      Environment::STAGE,
-        [],
-      fn($provider, $type): null => NULL,
-      Environment::STAGE,
-    ];
+  public static function dataProviderPlatformTypes(): \Iterator {
+    yield 'platform returns local' => [Environment::LOCAL, Environment::DEVELOPMENT, Environment::LOCAL];
+    yield 'platform returns ci' => [Environment::CI, Environment::DEVELOPMENT, Environment::CI];
+    yield 'platform returns development' => [Environment::DEVELOPMENT, Environment::STAGE, Environment::DEVELOPMENT];
+    yield 'platform returns preview' => [Environment::PREVIEW, Environment::DEVELOPMENT, Environment::PREVIEW];
+    yield 'platform returns stage' => [Environment::STAGE, Environment::DEVELOPMENT, Environment::STAGE];
+    yield 'platform returns production' => [Environment::PRODUCTION, Environment::DEVELOPMENT, Environment::PRODUCTION];
+    yield 'platform returns null uses fallback' => [NULL, Environment::PREVIEW, Environment::PREVIEW];
   }
 
   #[DataProvider('dataProviderInitWithParameterCombinations')]
-  public function testInitWithParameterCombinations(bool $contextualize, string $fallback, ?callable $override, array $providers, array $contexts, string $expected): void {
+  public function testInitWithParameterCombinations(bool $contextualize, string $fallback, string $expected): void {
     Environment::init(
       contextualize: $contextualize,
       fallback: $fallback,
-      override: $override,
-      providers: $providers,
-      contexts: $contexts
     );
 
     $this->assertSame($expected, getenv('ENVIRONMENT_TYPE'));
   }
 
   public static function dataProviderInitWithParameterCombinations(): \Iterator {
-    yield 'default parameters' => [
-      TRUE,
-      Environment::DEVELOPMENT,
-      NULL,
-        [],
-        [],
-      Environment::DEVELOPMENT,
-    ];
-    yield 'contextualize false' => [
-      FALSE,
-      Environment::DEVELOPMENT,
-      NULL,
-        [],
-        [],
-      Environment::DEVELOPMENT,
-    ];
-    yield 'custom fallback' => [
-      TRUE,
-      Environment::PRODUCTION,
-      NULL,
-        [],
-        [],
-      Environment::PRODUCTION,
-    ];
+    yield 'default parameters' => [TRUE, Environment::DEVELOPMENT, Environment::LOCAL];
+    yield 'contextualize false' => [FALSE, Environment::DEVELOPMENT, Environment::LOCAL];
+    yield 'custom fallback ignored without platform' => [TRUE, Environment::PRODUCTION, Environment::LOCAL];
   }
 
   public function testInitOnlyRunsOnce(): void {
-    Environment::init(fallback: Environment::STAGE);
+    $platform = $this->mockPlatform(Environment::STAGE, TRUE, id: 'once-platform');
+
+    Environment::init(contextualize: FALSE, platforms: [$platform]);
     $this->assertSame(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
 
-    Environment::init(fallback: Environment::PRODUCTION);
+    // A second init() is a no-op, so the new platform is never consulted.
+    Environment::init(contextualize: FALSE, fallback: Environment::PRODUCTION);
     $this->assertSame(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
   }
 
-  public function testActiveProviderDetection(): void {
-    $active_provider = $this->mockProvider(Environment::PRODUCTION, TRUE, id: 'active-provider');
-    $inactive_provider = $this->mockProvider(Environment::LOCAL, FALSE, id: 'inactive-provider');
+  public function testReset(): void {
+    $platform = $this->mockPlatform(Environment::STAGE, TRUE, id: 'reset-platform');
 
-    Environment::init(providers: [$active_provider, $inactive_provider]);
+    Environment::init(contextualize: FALSE, platforms: [$platform]);
+    $this->assertSame(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
+
+    Environment::reset();
+    self::envUnset('ENVIRONMENT_TYPE');
+
+    Environment::init(contextualize: FALSE);
+    $this->assertSame(Environment::LOCAL, getenv('ENVIRONMENT_TYPE'));
+  }
+
+  public function testResetAll(): void {
+    Environment::init(contextualize: FALSE, fallback: Environment::STAGE);
+    $this->assertSame(Environment::LOCAL, getenv('ENVIRONMENT_TYPE'));
+
+    Environment::reset(TRUE);
+    self::envUnset('ENVIRONMENT_TYPE');
+
+    // After reset(TRUE) the fallback is back to the default; with a platform
+    // that cannot resolve a type, the default fallback is used.
+    $platform = $this->mockPlatform(NULL, TRUE, id: 'reset-all-platform');
+    Environment::init(contextualize: FALSE, platforms: [$platform]);
+    $this->assertSame(Environment::DEVELOPMENT, getenv('ENVIRONMENT_TYPE'));
+  }
+
+  public function testMultipleActivePlatformsException(): void {
+    $platform1 = $this->mockPlatform(Environment::LOCAL, TRUE, id: 'active-id');
+    $platform2 = $this->mockPlatform(Environment::STAGE, TRUE, id: 'active-id-2');
+
+    $this->expectException(\Exception::class);
+    $this->expectExceptionMessageMatches('/Multiple active environment platforms detected/');
+
+    Environment::init(platforms: [$platform1, $platform2]);
+  }
+
+  public function testMultipleActiveContextsException(): void {
+    $context1 = $this->mockContext(TRUE, 'active-id');
+    $context2 = $this->mockContext(TRUE, 'active-id-2');
+
+    $this->expectException(\Exception::class);
+    $this->expectExceptionMessageMatches('/Multiple active contexts detected/');
+
+    Environment::init(contexts: [$context1, $context2]);
+  }
+
+  public function testDuplicatePlatformIdsException(): void {
+    $platform1 = $this->mockPlatform(Environment::LOCAL, FALSE, id: 'duplicate-id');
+    $platform2 = $this->mockPlatform(Environment::STAGE, FALSE, id: 'duplicate-id');
+
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage('Platform with ID "duplicate-id" is already registered');
+
+    Environment::init(platforms: [$platform1, $platform2]);
+  }
+
+  public function testDuplicateStackIdsException(): void {
+    $stack1 = $this->mockStack(FALSE, id: 'duplicate-stack');
+    $stack2 = $this->mockStack(FALSE, id: 'duplicate-stack');
+
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage('Stack with ID "duplicate-stack" is already registered');
+
+    Environment::init(stacks: [$stack1, $stack2]);
+  }
+
+  public function testDuplicateContextIdsException(): void {
+    $context1 = $this->mockContext(FALSE, 'duplicate-id');
+    $context2 = $this->mockContext(FALSE, 'duplicate-id');
+
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage('Context with ID "duplicate-id" is already registered');
+
+    Environment::init(contexts: [$context1, $context2]);
+  }
+
+  public function testInitWithInvalidPlatform(): void {
+    $invalid_platform = new \stdClass();
+
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage('The platform must implement PlatformInterface');
+
+    // @phpstan-ignore-next-line
+    Environment::init(platforms: [$invalid_platform]);
+  }
+
+  public function testInitWithInvalidStack(): void {
+    $invalid_stack = new \stdClass();
+
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage('The stack must implement StackInterface');
+
+    // @phpstan-ignore-next-line
+    Environment::init(stacks: [$invalid_stack]);
+  }
+
+  public function testInitWithInvalidContext(): void {
+    $invalid_context = new \stdClass();
+
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage('The context must implement ContextInterface');
+
+    // @phpstan-ignore-next-line
+    Environment::init(contexts: [$invalid_context]);
+  }
+
+  #[DataProvider('dataProviderContextualization')]
+  public function testContextualization(bool $contextualize, bool $has_active_context, int $expected_context_calls, int $expected_platform_calls): void {
+    $mock_context = $this->mockContext($has_active_context, 'test-context');
+    $mock_platform = $this->mockPlatform(Environment::STAGE, TRUE, id: 'test-platform');
+
+    // @phpstan-ignore-next-line
+    $mock_context->expects($this->exactly($expected_context_calls))->method('contextualize');
+    // @phpstan-ignore-next-line
+    $mock_platform->expects($this->exactly($expected_platform_calls))->method('contextualize');
+
+    Environment::init(
+      contextualize: $contextualize,
+      platforms: [$mock_platform],
+      contexts: [$mock_context],
+    );
+
+    $this->assertSame(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
+  }
+
+  public static function dataProviderContextualization(): \Iterator {
+    yield 'contextualize true with active context' => [TRUE, TRUE, 1, 1];
+    yield 'contextualize false with active context' => [FALSE, TRUE, 0, 0];
+    yield 'contextualize true without active context' => [TRUE, FALSE, 0, 0];
+  }
+
+  public function testActiveStacksAllGetContextualized(): void {
+    $context = $this->mockContext(TRUE, 'stacks-context');
+    $platform = $this->mockPlatform(Environment::STAGE, TRUE, id: 'stacks-platform');
+
+    $stack1 = $this->mockStack(TRUE, id: 'stack-1');
+    $stack2 = $this->mockStack(TRUE, id: 'stack-2');
+    $stack_inactive = $this->mockStack(FALSE, id: 'stack-inactive');
+
+    // @phpstan-ignore-next-line
+    $stack1->expects($this->once())->method('contextualize')->with($context);
+    // @phpstan-ignore-next-line
+    $stack2->expects($this->once())->method('contextualize')->with($context);
+    // @phpstan-ignore-next-line
+    $stack_inactive->expects($this->never())->method('contextualize');
+
+    Environment::init(
+      contextualize: TRUE,
+      platforms: [$platform],
+      stacks: [$stack1, $stack2, $stack_inactive],
+      contexts: [$context],
+    );
+
+    $this->assertSame(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
+  }
+
+  public function testNoopContextualizeWithRealPlatformAndStack(): void {
+    // An active platform and stack that both inherit the no-op contextualize()
+    // (Acquia and Docker) plus an active Drupal context exercise the abstract
+    // no-op path without injecting any platform/stack-specific settings.
+    self::envSet('AH_SITE_ENVIRONMENT', 'prod');
+    self::envSet('DOCKER', 'TRUE');
+
+    global $settings;
+    $settings = ['hash_salt' => 'abc'];
+
+    Environment::init();
+
+    // Re-read the global after init() mutated it via the active context.
+    global $settings;
+
     $this->assertSame(Environment::PRODUCTION, getenv('ENVIRONMENT_TYPE'));
+    // Only the generic Drupal context change is applied.
+    $this->assertSame(Environment::PRODUCTION, $settings['environment']);
+    $this->assertArrayNotHasKey('reverse_proxy', $settings);
   }
 
-  public function testProviderReturningNullUsesFallback(): void {
-    $null_provider = $this->mockProvider(NULL, TRUE, id: 'null-provider');
+  public function testGetActiveStacksReturnsActiveOnly(): void {
+    self::envSet('DOCKER', 'TRUE');
 
-    Environment::init(fallback: Environment::PREVIEW, providers: [$null_provider]);
-    $this->assertSame(Environment::PREVIEW, getenv('ENVIRONMENT_TYPE'));
-  }
+    $active_ids = array_map(static fn(StackInterface $stack): string => $stack->id(), Environment::getActiveStacks());
 
-  public function testOverrideCallbackModifiesType(): void {
-    $provider = $this->mockProvider(Environment::LOCAL, TRUE, id: 'override-test');
-    $override = (fn($provider, $type): string => Environment::STAGE);
-
-    Environment::init(override: $override, providers: [$provider]);
-    $this->assertSame(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame(['docker'], $active_ids);
   }
 
   #[DataProvider('dataProviderIsEnvironmentTypeMethods')]
@@ -234,171 +392,6 @@ final class EnvironmentTest extends EnvironmentDetectorTestCase {
     yield 'custom type does not match' => ['custom-env', 'different-env', FALSE];
     yield 'standard type matches custom' => [Environment::LOCAL, Environment::LOCAL, TRUE];
     yield 'standard type does not match custom' => [Environment::LOCAL, 'custom-env', FALSE];
-  }
-
-  public function testReset(): void {
-    Environment::init(fallback: Environment::STAGE);
-    $this->assertSame(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
-
-    Environment::reset();
-    self::envUnset('ENVIRONMENT_TYPE');
-
-    Environment::init();
-    $this->assertSame(Environment::DEVELOPMENT, getenv('ENVIRONMENT_TYPE'));
-  }
-
-  public function testResetAll(): void {
-    $override = (fn($provider, $type): string => Environment::PRODUCTION);
-    Environment::init(fallback: Environment::STAGE, override: $override);
-    $this->assertSame(Environment::PRODUCTION, getenv('ENVIRONMENT_TYPE'));
-
-    Environment::reset(TRUE);
-    self::envUnset('ENVIRONMENT_TYPE');
-
-    Environment::init();
-    $this->assertSame(Environment::DEVELOPMENT, getenv('ENVIRONMENT_TYPE'));
-  }
-
-  public function testMultipleActiveProvidersException(): void {
-    $provider1 = $this->mockProvider(Environment::LOCAL, TRUE, id: 'active-id');
-    $provider2 = $this->mockProvider(Environment::STAGE, TRUE, id: 'active-id-2');
-
-    $this->expectException(\Exception::class);
-    $this->expectExceptionMessageMatches('/Multiple active environment providers detected/');
-
-    Environment::init(providers: [$provider1, $provider2]);
-  }
-
-  public function testMultipleActiveContextsException(): void {
-    $context1 = $this->mockContext(TRUE, 'active-id');
-    $context2 = $this->mockContext(TRUE, 'active-id-2');
-
-    $this->expectException(\Exception::class);
-    $this->expectExceptionMessageMatches('/Multiple active contexts detected/');
-
-    Environment::init(contexts: [$context1, $context2]);
-  }
-
-  public function testInitWithInvalidOverrideCallback(): void {
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('The callback must be callable');
-
-    Environment::init(override: ['not', 'callable']);
-  }
-
-  public function testInitWithInvalidProvider(): void {
-    $invalid_provider = new \stdClass();
-
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('The provider must implement ProviderInterface');
-
-    // @phpstan-ignore-next-line
-    Environment::init(providers: [$invalid_provider]);
-  }
-
-  public function testInitWithInvalidContext(): void {
-    $invalid_context = new \stdClass();
-
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('The context must implement ContextInterface');
-
-    // @phpstan-ignore-next-line
-    Environment::init(contexts: [$invalid_context]);
-  }
-
-  public function testDuplicateProviderIdsException(): void {
-    $provider1 = $this->mockProvider(Environment::LOCAL, FALSE, id: 'duplicate-id');
-    $provider2 = $this->mockProvider(Environment::STAGE, FALSE, id: 'duplicate-id');
-
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('Provider with ID "duplicate-id" is already registered');
-
-    Environment::init(providers: [$provider1, $provider2]);
-  }
-
-  public function testDuplicateContextIdsException(): void {
-    $context1 = $this->mockContext(FALSE, 'duplicate-id');
-    $context2 = $this->mockContext(FALSE, 'duplicate-id');
-
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('Context with ID "duplicate-id" is already registered');
-
-    Environment::init(contexts: [$context1, $context2]);
-  }
-
-  #[DataProvider('dataProviderContextualization')]
-  public function testContextualization(bool $contextualize, bool $has_active_context, int $expected_contextualize_calls, int $expected_provider_contextualize_calls): void {
-    $mock_context = $this->mockContext($has_active_context, 'test-context');
-    $mock_provider = $this->mockProvider(Environment::STAGE, TRUE, id: 'test-provider');
-
-    if ($has_active_context && $contextualize) {
-      // @phpstan-ignore-next-line
-      $mock_context->expects($this->exactly($expected_contextualize_calls))
-        ->method('contextualize');
-      // @phpstan-ignore-next-line
-      $mock_provider->expects($this->exactly($expected_provider_contextualize_calls))
-        ->method('contextualize')
-        ->with($mock_context);
-    }
-    else {
-      // @phpstan-ignore-next-line
-      $mock_context->expects($this->exactly($expected_contextualize_calls))
-        ->method('contextualize');
-      // @phpstan-ignore-next-line
-      $mock_provider->expects($this->exactly($expected_provider_contextualize_calls))
-        ->method('contextualize');
-    }
-
-    Environment::init(
-      contextualize: $contextualize,
-      providers: [$mock_provider],
-      contexts: [$mock_context]
-    );
-
-    $this->assertSame(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
-  }
-
-  public static function dataProviderContextualization(): \Iterator {
-    yield 'contextualize true with active context' => [TRUE, TRUE, 1, 1];
-    yield 'contextualize false with active context' => [FALSE, TRUE, 0, 0];
-    yield 'contextualize true without active context' => [TRUE, FALSE, 0, 0];
-  }
-
-  #[DataProvider('dataProviderProviderTypes')]
-  public function testProviderTypes(?string $provider_type, string $fallback, string $expected): void {
-    $provider = $this->mockProvider($provider_type, TRUE, id: 'type-test-provider');
-
-    Environment::init(fallback: $fallback, providers: [$provider]);
-
-    $this->assertSame($expected, getenv('ENVIRONMENT_TYPE'));
-  }
-
-  public static function dataProviderProviderTypes(): \Iterator {
-    yield 'provider returns local' => [Environment::LOCAL, Environment::DEVELOPMENT, Environment::LOCAL];
-    yield 'provider returns ci' => [Environment::CI, Environment::DEVELOPMENT, Environment::CI];
-    yield 'provider returns development' => [Environment::DEVELOPMENT, Environment::STAGE, Environment::DEVELOPMENT];
-    yield 'provider returns preview' => [Environment::PREVIEW, Environment::DEVELOPMENT, Environment::PREVIEW];
-    yield 'provider returns stage' => [Environment::STAGE, Environment::DEVELOPMENT, Environment::STAGE];
-    yield 'provider returns production' => [Environment::PRODUCTION, Environment::DEVELOPMENT, Environment::PRODUCTION];
-    yield 'provider returns null uses fallback' => [NULL, Environment::PREVIEW, Environment::PREVIEW];
-  }
-
-  public function testOverrideCallbackReceivesCorrectParameters(): void {
-    $received_provider = NULL;
-    $received_type = NULL;
-    $active_provider = $this->mockProvider(Environment::LOCAL, TRUE, id: 'callback-test-provider');
-
-    $override = function ($provider, $type) use (&$received_provider, &$received_type): string {
-      $received_provider = $provider;
-      $received_type = $type;
-      return Environment::PRODUCTION;
-    };
-
-    Environment::init(override: $override, providers: [$active_provider]);
-
-    $this->assertSame($active_provider, $received_provider);
-    $this->assertEquals(Environment::LOCAL, $received_type);
-    $this->assertSame(Environment::PRODUCTION, getenv('ENVIRONMENT_TYPE'));
   }
 
 }

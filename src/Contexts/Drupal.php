@@ -21,11 +21,6 @@ class Drupal extends AbstractContext {
   /**
    * {@inheritdoc}
    */
-  public const LABEL = 'Drupal';
-
-  /**
-   * {@inheritdoc}
-   */
   public function active(): bool {
     global $settings;
     global $config;

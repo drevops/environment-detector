@@ -7,8 +7,8 @@ namespace DrevOps\EnvironmentDetector\Tests;
 use AlexSkrypnyk\PhpunitHelpers\Traits\EnvTrait;
 use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 use DrevOps\EnvironmentDetector\Environment;
-use DrevOps\EnvironmentDetector\Providers\AbstractProvider;
-use DrevOps\EnvironmentDetector\Providers\ProviderInterface;
+use DrevOps\EnvironmentDetector\Platforms\PlatformInterface;
+use DrevOps\EnvironmentDetector\Stacks\StackInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
@@ -46,14 +46,8 @@ class EnvironmentDetectorTestCase extends TestCase {
     Environment::reset(TRUE);
   }
 
-  protected function mockProvider(string|callable|null $type = Environment::DEVELOPMENT, bool|callable|null $active = TRUE, callable|null $contextualize = NULL, ?callable $env_prefixes = NULL, string $id = 'mocked_provider'): ProviderInterface {
-    $mock = $this->createPartialMock(AbstractProvider::class, [
-      'type',
-      'active',
-      'contextualize',
-      'envPrefixes',
-      'id',
-    ]);
+  protected function mockPlatform(string|callable|null $type = Environment::DEVELOPMENT, bool|callable|null $active = TRUE, callable|null $contextualize = NULL, string $id = 'mocked_platform'): PlatformInterface {
+    $mock = $this->createMock(PlatformInterface::class);
 
     if (is_callable($type)) {
       $mock->method('type')->willReturnCallback($type);
@@ -73,8 +67,28 @@ class EnvironmentDetectorTestCase extends TestCase {
       $mock->method('contextualize')->willReturnCallback($contextualize);
     }
 
-    if (is_callable($env_prefixes)) {
-      $mock->method('envPrefixes')->willReturnCallback($env_prefixes);
+    if (!empty($id)) {
+      $mock->expects($this->atLeastOnce())->method('id')->willReturn($id);
+    }
+    else {
+      $mock->expects($this->never())->method('id');
+    }
+
+    return $mock;
+  }
+
+  protected function mockStack(bool|callable|null $active = TRUE, callable|null $contextualize = NULL, string $id = 'mocked_stack'): StackInterface {
+    $mock = $this->createMock(StackInterface::class);
+
+    if (is_callable($active)) {
+      $mock->method('active')->willReturnCallback($active);
+    }
+    else {
+      $mock->method('active')->willReturn($active);
+    }
+
+    if (is_callable($contextualize)) {
+      $mock->method('contextualize')->willReturnCallback($contextualize);
     }
 
     if (!empty($id)) {

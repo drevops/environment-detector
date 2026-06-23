@@ -32,7 +32,6 @@ abstract class ContextTestCase extends EnvironmentDetectorTestCase {
     if ($expect_equals) {
       Environment::reset();
       $this->assertSame($this->contextId, Environment::getActiveContext()?->id(), sprintf('Context ID is %s', $this->contextId));
-      $this->assertNotEmpty(Environment::getActiveContext()->label(), 'Context label is not empty');
     }
     else {
       $this->assertNotSame($this->contextId, Environment::getActiveContext()?->id(), sprintf('Context ID is not %s', $this->contextId));

@@ -6,7 +6,8 @@ namespace DrevOps\EnvironmentDetector\Benchmarks;
 
 use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 use DrevOps\EnvironmentDetector\Environment;
-use DrevOps\EnvironmentDetector\Providers\ProviderInterface;
+use DrevOps\EnvironmentDetector\Platforms\PlatformInterface;
+use DrevOps\EnvironmentDetector\Stacks\StackInterface;
 use PhpBench\Attributes as Bench;
 
 class DiscoveryBenchmark {
@@ -16,7 +17,7 @@ class DiscoveryBenchmark {
   }
 
   /**
-   * Benchmark registering custom providers.
+   * Benchmark registering custom platforms.
    *
    * @param array<string,int> $params
    *   An array of parameters.
@@ -26,27 +27,22 @@ class DiscoveryBenchmark {
   #[Bench\Warmup(2)]
   #[Bench\RetryThreshold(5)]
   #[Bench\BeforeMethods(['setUp'])]
-  #[Bench\ParamProviders(['provideCustomProviders'])]
-  public function benchCustomProviders(array $params): void {
-    $providers = [];
-    // Add specified number of custom providers.
+  #[Bench\ParamProviders(['provideCustomPlatforms'])]
+  public function benchCustomPlatforms(array $params): void {
+    $platforms = [];
+    // Add specified number of custom platforms.
     static $counter = 0;
     for ($i = 0; $i < intval($params['count']); $i++) {
-      $unique_id = 'test_provider_' . uniqid() . '_' . (++$counter);
-      $providers[] = new class($unique_id, 'Test Provider ' . $i) implements ProviderInterface {
+      $unique_id = 'test_platform_' . uniqid() . '_' . (++$counter);
+      $platforms[] = new class($unique_id) implements PlatformInterface {
 
         public function __construct(
           private readonly string $id,
-          private readonly string $label,
         ) {
         }
 
         public function id(): string {
           return $this->id;
-        }
-
-        public function label(): string {
-          return $this->label;
         }
 
         public function active(): bool {
@@ -57,8 +53,55 @@ class DiscoveryBenchmark {
           return NULL;
         }
 
-        public function data(): array {
-          return [];
+        public function contextualize(ContextInterface $context): void {
+          // No-op for benchmark.
+        }
+
+      };
+    }
+
+    Environment::init(contextualize: FALSE, platforms: $platforms);
+  }
+
+  public function provideCustomPlatforms(): \Generator {
+    yield '0 custom platform' => ['count' => 0];
+    yield '1 custom platform' => ['count' => 1];
+    yield '2 custom platforms' => ['count' => 2];
+    yield '5 custom platforms' => ['count' => 5];
+    yield '10 custom platforms' => ['count' => 10];
+  }
+
+  /**
+   * Benchmark registering custom stacks.
+   *
+   * @param array<string,int> $params
+   *   An array of parameters.
+   */
+  #[Bench\Revs(50)]
+  #[Bench\Iterations(20)]
+  #[Bench\Warmup(2)]
+  #[Bench\RetryThreshold(5)]
+  #[Bench\BeforeMethods(['setUp'])]
+  #[Bench\ParamProviders(['provideCustomStacks'])]
+  public function benchCustomStacks(array $params): void {
+    $stacks = [];
+    // Add specified number of custom stacks.
+    static $counter = 0;
+    for ($i = 0; $i < intval($params['count']); $i++) {
+      $unique_id = 'test_stack_' . uniqid() . '_' . (++$counter);
+      $stacks[] = new class($unique_id) implements StackInterface {
+
+        public function __construct(
+          private readonly string $id,
+        ) {
+        }
+
+        public function id(): string {
+          return $this->id;
+        }
+
+        public function active(): bool {
+          return FALSE;
         }
 
         public function contextualize(ContextInterface $context): void {
@@ -68,15 +111,15 @@ class DiscoveryBenchmark {
       };
     }
 
-    Environment::init(contextualize: FALSE, providers: $providers);
+    Environment::init(contextualize: FALSE, stacks: $stacks);
   }
 
-  public function provideCustomProviders(): \Generator {
-    yield '0 custom provider' => ['count' => 0];
-    yield '1 custom provider' => ['count' => 1];
-    yield '2 custom providers' => ['count' => 2];
-    yield '5 custom providers' => ['count' => 5];
-    yield '10 custom providers' => ['count' => 10];
+  public function provideCustomStacks(): \Generator {
+    yield '0 custom stack' => ['count' => 0];
+    yield '1 custom stack' => ['count' => 1];
+    yield '2 custom stacks' => ['count' => 2];
+    yield '5 custom stacks' => ['count' => 5];
+    yield '10 custom stacks' => ['count' => 10];
   }
 
   /**
@@ -97,20 +140,15 @@ class DiscoveryBenchmark {
     static $counter = 0;
     for ($i = 0; $i < intval($params['count']); $i++) {
       $unique_id = 'test_context_' . uniqid() . '_' . (++$counter);
-      $contexts[] = new class($unique_id, 'Test Context ' . $i) implements ContextInterface {
+      $contexts[] = new class($unique_id) implements ContextInterface {
 
         public function __construct(
           private readonly string $id,
-          private readonly string $label,
         ) {
         }
 
         public function id(): string {
           return $this->id;
-        }
-
-        public function label(): string {
-          return $this->label;
         }
 
         public function active(): bool {

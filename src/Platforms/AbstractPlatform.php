@@ -2,19 +2,21 @@
 
 declare(strict_types=1);
 
-namespace DrevOps\EnvironmentDetector\Contexts;
+namespace DrevOps\EnvironmentDetector\Platforms;
+
+use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 
 /**
- * Abstract context.
+ * Abstract platform.
  *
- * All contexts should extend this class.
+ * All platforms should extend this class.
  *
- * @package DrevOps\EnvironmentDetector\Contexts
+ * @package DrevOps\EnvironmentDetector\Platforms
  */
-abstract class AbstractContext implements ContextInterface {
+abstract class AbstractPlatform implements PlatformInterface {
 
   /**
-   * Context ID. Contexts should override this constant.
+   * Platform ID. Platforms should override this constant.
    */
   public const ID = 'undefined';
 
@@ -31,11 +33,9 @@ abstract class AbstractContext implements ContextInterface {
   // phpcs:disable DrupalPractice.Commenting.CommentEmptyLine.SpacingAfter
   // phpcs:disable Drupal.Commenting.FunctionComment.WrongStyle
   // phpcs:disable Squiz.WhiteSpace.FunctionSpacing.After
-  // @codeCoverageIgnoreStart
-  public function contextualize(): void {
-    // Noop.
+  public function contextualize(ContextInterface $context): void {
+    // Noop. Override to inject context-specific settings.
   }
-  // @codeCoverageIgnoreEnd
   // phpcs:enable DrupalPractice.Commenting.CommentEmptyLine.SpacingAfter
   // phpcs:enable Drupal.Commenting.FunctionComment.WrongStyle
   // phpcs:enable Squiz.WhiteSpace.FunctionSpacing.After
