@@ -221,7 +221,7 @@ final class LagoonTest extends PlatformTestCase {
             'trusted_host_patterns' => [
               '^nginx\-php$',
               '^.+\.au\.amazee\.io$',
-              '^example1\.com|example2\.com$',
+              '^(example1\.com|example2\.com)$',
             ],
           ], $default_settings),
           'config' => array_merge_recursive([], $default_config),
@@ -245,7 +245,7 @@ final class LagoonTest extends PlatformTestCase {
             'trusted_host_patterns' => [
               '^nginx\-php$',
               '^.+\.au\.amazee\.io$',
-              '^example1\.com|example2/com$',
+              '^(example1\.com|example2/com)$',
             ],
           ], $default_settings
           ),

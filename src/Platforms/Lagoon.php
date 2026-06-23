@@ -92,7 +92,7 @@ class Lagoon extends AbstractPlatform {
       $patterns = str_replace(['.', 'https://', 'http://', ','], [
         '\.', '', '', '|',
       ], $routes);
-      $settings['trusted_host_patterns'][] = '^' . $patterns . '$';
+      $settings['trusted_host_patterns'][] = '^(' . $patterns . ')$';
     }
   }
 
