@@ -252,6 +252,45 @@ final class LagoonTest extends PlatformTestCase {
           'config' => array_merge_recursive([], $default_config),
         ],
       ],
+      [
+        function () use ($default_settings, $default_config): void {
+          global $settings;
+          global $config;
+          $settings = $default_settings;
+          $config = $default_config;
+          self::envSet('LAGOON_AMAZEEIO_REGION', 'us');
+        },
+        [
+          'settings' => array_merge_recursive([
+            'reverse_proxy' => TRUE,
+            'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
+            'trusted_host_patterns' => [
+              '^nginx\-php$',
+              '^.+\.us\.amazee\.io$',
+            ],
+          ] + $default_settings),
+          'config' => array_merge_recursive([], $default_config),
+        ],
+      ],
+      [
+        function () use ($default_settings, $default_config): void {
+          global $settings;
+          global $config;
+          $settings = $default_settings;
+          $config = $default_config;
+          self::envSet('LAGOON_AMAZEEIO_REGION', '');
+        },
+        [
+          'settings' => array_merge_recursive([
+            'reverse_proxy' => TRUE,
+            'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
+            'trusted_host_patterns' => [
+              '^nginx\-php$',
+            ],
+          ] + $default_settings),
+          'config' => array_merge_recursive([], $default_config),
+        ],
+      ],
     ];
   }
 
