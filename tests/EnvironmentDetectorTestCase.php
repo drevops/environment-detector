@@ -61,6 +61,26 @@ class EnvironmentDetectorTestCase extends TestCase {
     Environment::reset(TRUE);
   }
 
+  /**
+   * Skip a test whose expectation only holds on a bare-metal host.
+   *
+   * The container stacks probe the real filesystem (/.dockerenv, cgroups),
+   * which environment isolation cannot mask. A suite run inside a container
+   * would therefore see a container stack take precedence over the native
+   * fallback, so cases asserting the native (bare-metal) outcome are skipped.
+   */
+  protected function requireBareMetalHost(): void {
+    $active_stack_id = Environment::getActiveStack()?->id();
+
+    // Probing cached the resolved stack; clear it so a later init() re-registers
+    // its own stacks from scratch instead of returning this stale result.
+    Environment::reset();
+
+    if ($active_stack_id !== 'native') {
+      $this->markTestSkipped('Test requires a bare-metal host where the native stack is active.');
+    }
+  }
+
   protected function mockPlatform(string|callable|null $type = Environment::DEVELOPMENT, bool|callable|null $active = TRUE, callable|null $contextualize = NULL, string $id = 'mocked_platform'): PlatformInterface {
     $mock = $this->createMock(PlatformInterface::class);
 

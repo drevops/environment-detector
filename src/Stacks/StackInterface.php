@@ -9,11 +9,11 @@ use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 /**
  * Stack interface.
  *
- * A stack is the substrate an environment runs in (a container, or a more
- * specific container). It nests inside a platform and never decides the
- * environment type, so it has no type(). Exactly one stack is active at a time
- * (the most specific one that matches), or none. The active stack may
- * contribute settings.
+ * A stack is the substrate an environment runs in (the native host, a
+ * container, or a more specific container). It nests inside a platform and
+ * never decides the environment type, so it has no type(). Exactly one stack is
+ * always active - the most specific one that matches, or the native host as the
+ * last-resort fallback. The active stack may contribute settings.
  *
  * @package DrevOps\EnvironmentDetector\Stacks
  */

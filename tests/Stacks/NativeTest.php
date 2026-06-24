@@ -12,10 +12,14 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(Environment::class)]
 final class NativeTest extends StackTestCase {
 
+  public function testActiveOnBareMetal(): void {
+    $this->requireBareMetalHost();
+
+    $this->assertSame('native', Environment::getActiveStack()?->id());
+  }
+
   public static function dataProviderActive(): \Iterator|array {
-    // Bare metal: with no container signal the native host is the active stack.
-    yield [fn(): null => NULL, TRUE];
-    // Inside a container a container stack wins over the native fallback.
+    // A container stack wins over the native fallback.
     yield [fn(): null => self::envSet('DOCKER', 'TRUE'), FALSE];
   }
 

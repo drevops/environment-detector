@@ -158,7 +158,7 @@ Environment::init(platforms: [new CustomHosting()]);
 
 ## Stacks
 
-A stack is the substrate the run sits in. Stacks never decide the type. Exactly one stack is always active - the most specific container that matches, or the native host on bare metal. `Container` is the generic container fallback, `Ddev` and `Lando` are specific containers that match only when they are also a container, and `Native` is the bare-metal host selected when nothing containerised matches. Built-ins:
+A stack is the substrate the run sits in. Stacks never decide the type. Exactly one stack is always active - the most specific registered stack that matches, or the native host on bare metal. `Container` is the generic container fallback, `Ddev` and `Lando` are specific containers that match only when they are also a container, and `Native` is the bare-metal host selected when nothing containerised matches. Built-ins:
 
 - [Container](src/Stacks/Container.php)
 - [DDEV](src/Stacks/Ddev.php)
@@ -175,7 +175,7 @@ if (Environment::getActiveStack()?->id() === 'ddev') {
 }
 ```
 
-`getActiveStack()` returns the single active stack - the `native` host when nothing containerised matches.
+`getActiveStack()` returns the first registered stack whose `active()` matches - your custom stacks included - with the `native` host as the last-resort fallback.
 
 Add your own by implementing `StackInterface`:
 

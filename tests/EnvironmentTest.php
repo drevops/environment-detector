@@ -246,6 +246,8 @@ final class EnvironmentTest extends EnvironmentDetectorTestCase {
   }
 
   public function testActiveStackGetsContextualized(): void {
+    $this->requireBareMetalHost();
+
     $context = $this->mockContext(TRUE, 'stacks-context');
     $platform = $this->mockPlatform(Environment::STAGE, TRUE, id: 'stacks-platform');
 
@@ -308,6 +310,8 @@ final class EnvironmentTest extends EnvironmentDetectorTestCase {
   }
 
   public function testGetActiveStackReturnsNativeOnBareMetal(): void {
+    $this->requireBareMetalHost();
+
     $this->assertSame('native', Environment::getActiveStack()?->id());
   }
 
