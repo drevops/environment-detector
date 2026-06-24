@@ -20,7 +20,7 @@ class Ddev extends Container {
    * {@inheritdoc}
    */
   public function active(): bool {
-    return parent::active() && getenv('IS_DDEV_PROJECT') !== FALSE;
+    return getenv('IS_DDEV_PROJECT') !== FALSE;
   }
 
 }

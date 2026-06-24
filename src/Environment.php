@@ -438,6 +438,12 @@ class Environment {
       // Most-specific first; the generic fallback is registered last, so it is
       // returned only when nothing more specific matched.
       foreach (static::collectStacks() as $stack) {
+        // A container-family stack only counts when actually inside a
+        // container, so its own marker alone cannot win on bare metal.
+        if ($stack instanceof Container && !$stack->isContainer()) {
+          continue;
+        }
+
         if ($stack->active()) {
           static::$stack = $stack;
           break;

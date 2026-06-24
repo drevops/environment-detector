@@ -20,6 +20,16 @@ class Container extends AbstractStack {
    * {@inheritdoc}
    */
   public function active(): bool {
+    return $this->isContainer();
+  }
+
+  /**
+   * Check whether the environment runs inside a container.
+   *
+   * @return bool
+   *   TRUE if running inside a container, FALSE otherwise.
+   */
+  public function isContainer(): bool {
     // No single marker reliably proves containerisation across runtimes, so
     // probe several independent signals in turn: env vars set by tooling, the
     // engine-created marker files, then the control group of PID 1.

@@ -20,7 +20,7 @@ class Lando extends Container {
    * {@inheritdoc}
    */
   public function active(): bool {
-    return parent::active() && getenv('LANDO_INFO') !== FALSE;
+    return getenv('LANDO_INFO') !== FALSE;
   }
 
 }
