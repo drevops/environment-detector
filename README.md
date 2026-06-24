@@ -23,7 +23,7 @@ Answers one question, with no configuration: **what kind of environment is this 
 
 - Zero configuration: a single call detects and caches the type.
 - Recognises hosting platforms (Acquia, Lagoon, Pantheon, Platform.sh, Skpr, Tugboat) and CI services (GitHub Actions, GitLab CI, CircleCI).
-- Recognises local stacks (Docker, DDEV, Lando).
+- Recognises local stacks (Container, DDEV, Lando).
 - Applies framework-specific settings through contexts (Drupal).
 - Extendable with custom platforms, stacks, and contexts, with a safe fallback type.
 
@@ -62,7 +62,7 @@ A run is a set of nested rings, from an outer context down to the application:
 
 ```
 ┌─ PLATFORM ── hosting (tiered) · CI (flat) · none ⇒ local ───────────────┐
-│   ┌─ STACK ── host · docker · ddev · lando ─────────────────────────┐   │
+│   ┌─ STACK ── host · container · ddev · lando ──────────────────────┐   │
 │   │   ┌─ RUNTIME ── PHP 8.x ────────────────────────────────────┐   │   │
 │   │   │   ┌─ APP / CONTEXT ── Drupal ───────────────────────┐   │   │   │
 │   │   │   └─────────────────────────────────────────────────┘   │   │   │
@@ -72,16 +72,16 @@ A run is a set of nested rings, from an outer context down to the application:
 ```
 
 - **Platform** - the outermost ring, and the *only* one that decides the type. A hosting platform maps to `production`/`stage`/`development`/`preview`; a CI platform maps to `ci`; with no platform at all the type is `local` (or `ci` when a generic `CI` signal is present).
-- **Stack** - the substrate the run sits in (`docker`, `ddev`, `lando`). A stack nests inside a platform, never decides the type, and only contributes settings.
+- **Stack** - the substrate the run sits in (`container`, `ddev`, `lando`). A stack nests inside a platform, never decides the type, and only contributes settings. `ddev` and `lando` are specific containers; `container` is the generic fallback.
 - **Context** - the application/framework (e.g. Drupal) that detected settings are applied to.
 - **Runtime** (PHP) is shown only to complete the picture; it is not detected.
 
 Two rules follow:
 
 1. **At most one platform is active.** Two active platforms (say Acquia *and* Lagoon) is a genuine misconfiguration and throws.
-2. **Stacks may co-exist.** Docker inside Acquia, or Lando inside CI, are just inner rings - they never collide with the platform; each active stack simply contributes its settings.
+2. **Exactly one stack is active (the most specific container), or none on bare metal.** A container inside Acquia, or inside CI, is just an inner ring - it never collides with the platform. The most specific container that matches wins (DDEV over the generic container, say); the generic `container` is the fallback.
 
-When a context is active, it applies its generic settings first, then the active platform and every active stack apply their own on top. This happens even when the type was pre-set via `ENVIRONMENT_TYPE`.
+When a context is active, it applies its generic settings first, then the active platform and the active stack apply their own on top. This happens even when the type was pre-set via `ENVIRONMENT_TYPE`.
 
 ## Configuration
 
@@ -158,23 +158,23 @@ Environment::init(platforms: [new CustomHosting()]);
 
 ## Stacks
 
-A stack is the substrate the run sits in. Stacks never decide the type and may co-exist. Built-ins:
+A stack is the substrate the run sits in. Stacks never decide the type. Exactly one stack is active - the most specific container that matches, or none on bare metal. `Container` is the generic fallback; `Ddev` and `Lando` are specific containers that match only when they are also a container. Built-ins:
 
-- [Docker](src/Stacks/Docker.php)
+- [Container](src/Stacks/Container.php)
 - [DDEV](src/Stacks/Ddev.php)
 - [Lando](src/Stacks/Lando.php)
 
-Read the active stacks:
+Read the active stack:
 
 ```php
 Environment::init();
 
-foreach (Environment::getActiveStacks() as $stack) {
-  if ($stack->id() === 'ddev') {
-    // DDEV-specific logic.
-  }
+if (Environment::getActiveStack()?->id() === 'ddev') {
+  // DDEV-specific logic.
 }
 ```
+
+`getActiveStack()` returns the single active stack, or `null` on bare metal.
 
 Add your own by implementing `StackInterface`:
 
@@ -201,7 +201,7 @@ Environment::init(stacks: [new CustomStack()]);
 
 ## Contexts
 
-A context is the framework or application that detected settings are applied to. The [Drupal](src/Contexts/Drupal.php) context, for example, writes to the global `$settings` array; the active platform and stacks then layer their own changes on top (the Lagoon platform, say, adds its reverse-proxy and trusted-host settings).
+A context is the framework or application that detected settings are applied to. The [Drupal](src/Contexts/Drupal.php) context, for example, writes to the global `$settings` array; the active platform and the active stack then layer their own changes on top (the Lagoon platform, say, adds its reverse-proxy and trusted-host settings).
 
 Add your own by implementing `ContextInterface`:
 

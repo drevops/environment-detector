@@ -5,13 +5,11 @@ declare(strict_types=1);
 namespace DrevOps\EnvironmentDetector\Stacks;
 
 /**
- * DDEV stack.
- *
- * Detects whether the environment runs inside DDEV.
+ * DDEV stack (a DDEV container).
  *
  * @package DrevOps\EnvironmentDetector\Stacks
  */
-class Ddev extends AbstractStack {
+class Ddev extends Container {
 
   /**
    * {@inheritdoc}
@@ -22,7 +20,7 @@ class Ddev extends AbstractStack {
    * {@inheritdoc}
    */
   public function active(): bool {
-    return getenv('IS_DDEV_PROJECT') !== FALSE;
+    return parent::active() && getenv('IS_DDEV_PROJECT') !== FALSE;
   }
 
 }

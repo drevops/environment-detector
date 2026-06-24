@@ -46,10 +46,10 @@ Detection is modelled as nested rings. A run wraps from an outer ring down to th
 - Platforms map internal states to standard types: `local`, `ci`, `development`, `preview`, `stage`, `production`
 
 **Stack System (`src/Stacks/`)**
-- Inner rings - the substrate the environment runs in (Docker, DDEV, Lando)
-- Stacks implement `StackInterface` and extend `AbstractStack`
+- Inner ring - the substrate the environment runs in (a container, or a more specific container like DDEV or Lando)
+- A specific container extends `Container`; `Container` is the generic fallback and is registered last
 - Stacks never carry the environment type (no `type()`) and never collide with a platform
-- Multiple stacks can be active at the same time; each may contribute settings
+- Exactly one stack is active (the most specific container that matches), or none on bare metal; the active stack may contribute settings
 
 **Context System (`src/Contexts/`)**
 - The app/framework where settings land - apply changes after environment detection
@@ -60,7 +60,7 @@ Detection is modelled as nested rings. A run wraps from an outer ring down to th
 ### Key Patterns
 
 - **Static Facade**: All functionality accessed through `Environment::` static methods
-- **Nested Rings**: Platform (decides type) wraps Stack (substrate, inherits type) wraps Context (settings target)
+- **Nested Rings**: Platform (decides type) wraps Stack (substrate, no type) wraps Context (settings target)
 - **Constant-based Loading**: Platforms, stacks and contexts loaded from protected constants (no filesystem scanning)
 - **Associative Storage**: Platforms/stacks/contexts stored by ID as keys for O(1) duplicate detection
 - **Environment Variable Priority**: If `ENVIRONMENT_TYPE` is pre-set, it overrides detection
@@ -71,7 +71,7 @@ Detection is modelled as nested rings. A run wraps from an outer ring down to th
 1. `Environment::init()` - Initialize detection and populate env var
 2. Platform discovery finds the single active platform based on environment variables/files
 3. The active platform returns the environment type (no platform: `ci` when a `CI` signal is present, otherwise `local`)
-4. Optional context applies generic changes; the active platform and every active stack then apply their own context-specific changes
+4. Optional context applies generic changes; the active platform and the active stack then apply their own context-specific changes
 5. Result stored in `ENVIRONMENT_TYPE` env var
 
 ## Code Standards
@@ -117,7 +117,7 @@ src/
 │   ├── PlatformInterface.php
 │   ├── AbstractPlatform.php
 │   └── [SpecificPlatform].php
-├── Stacks/                  # Inner ring - substrate (docker/ddev/lando); no type
+├── Stacks/                  # Inner ring - substrate (container/ddev/lando); no type
 │   ├── StackInterface.php
 │   ├── AbstractStack.php
 │   └── [SpecificStack].php

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Tests\Stacks;
 
-use DrevOps\EnvironmentDetector\Stacks\StackInterface;
 use DrevOps\EnvironmentDetector\Environment;
 use DrevOps\EnvironmentDetector\Stacks\Ddev;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -15,10 +14,18 @@ final class DdevTest extends StackTestCase {
 
   public static function dataProviderActive(): \Iterator|array {
     yield [fn(): null => NULL, FALSE];
-    yield [fn(): null => self::envSet('IS_DDEV_PROJECT', 'TRUE'), TRUE];
+    // The DDEV marker alone is not enough: DDEV must be a container first.
+    yield [fn(): null => self::envSet('IS_DDEV_PROJECT', 'TRUE'), FALSE];
+    yield [
+      function (): void {
+          self::envSet('DOCKER', 'TRUE');
+          self::envSet('IS_DDEV_PROJECT', 'TRUE');
+      }, TRUE,
+    ];
   }
 
   public function testCoexistsWithCiPlatform(): void {
+    self::envSet('DOCKER', 'TRUE');
     self::envSet('IS_DDEV_PROJECT', 'TRUE');
     self::envSet('GITHUB_WORKFLOW', 'workflow_name');
 
@@ -28,8 +35,7 @@ final class DdevTest extends StackTestCase {
     $this->assertSame('github_actions', Environment::getActivePlatform()?->id());
     $this->assertSame(Environment::CI, getenv('ENVIRONMENT_TYPE'));
 
-    $active_ids = array_map(static fn(StackInterface $stack): string => $stack->id(), Environment::getActiveStacks());
-    $this->assertContains('ddev', $active_ids);
+    $this->assertSame('ddev', Environment::getActiveStack()?->id());
   }
 
 }

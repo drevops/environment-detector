@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Tests\Stacks;
 
-use DrevOps\EnvironmentDetector\Stacks\StackInterface;
 use DrevOps\EnvironmentDetector\Environment;
 use DrevOps\EnvironmentDetector\Tests\EnvironmentDetectorTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -30,13 +29,13 @@ abstract class StackTestCase extends EnvironmentDetectorTestCase {
   public function testActive(callable $before, bool $expect_active, ?callable $after = NULL): void {
     $before();
 
-    $active_ids = array_map(static fn(StackInterface $stack): string => $stack->id(), Environment::getActiveStacks());
+    $active_id = Environment::getActiveStack()?->id();
 
     if ($expect_active) {
-      $this->assertContains($this->stackId, $active_ids, sprintf('Stack %s is active', $this->stackId));
+      $this->assertSame($this->stackId, $active_id, sprintf('Stack %s is active', $this->stackId));
     }
     else {
-      $this->assertNotContains($this->stackId, $active_ids, sprintf('Stack %s is not active', $this->stackId));
+      $this->assertNotSame($this->stackId, $active_id, sprintf('Stack %s is not active', $this->stackId));
     }
 
     if ($after !== NULL) {

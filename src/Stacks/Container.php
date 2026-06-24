@@ -5,18 +5,16 @@ declare(strict_types=1);
 namespace DrevOps\EnvironmentDetector\Stacks;
 
 /**
- * Docker (vanilla) stack.
- *
- * Detects whether the environment runs inside a Docker container.
+ * Container stack (generic containerisation).
  *
  * @package DrevOps\EnvironmentDetector\Stacks
  */
-class Docker extends AbstractStack {
+class Container extends AbstractStack {
 
   /**
    * {@inheritdoc}
    */
-  public const ID = 'docker';
+  public const ID = 'container';
 
   /**
    * {@inheritdoc}

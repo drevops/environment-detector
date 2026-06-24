@@ -246,25 +246,27 @@ final class EnvironmentTest extends EnvironmentDetectorTestCase {
     yield 'contextualize true without active context' => [TRUE, FALSE, 0, 0];
   }
 
-  public function testActiveStacksAllGetContextualized(): void {
+  public function testActiveStackGetsContextualized(): void {
     $context = $this->mockContext(TRUE, 'stacks-context');
     $platform = $this->mockPlatform(Environment::STAGE, TRUE, id: 'stacks-platform');
 
-    $stack1 = $this->mockStack(TRUE, id: 'stack-1');
-    $stack2 = $this->mockStack(TRUE, id: 'stack-2');
+    $stack_active = $this->mockStack(TRUE, id: 'stack-active');
+    $stack_other = $this->mockStack(TRUE, id: 'stack-other');
     $stack_inactive = $this->mockStack(FALSE, id: 'stack-inactive');
 
+    // Only the single active stack is contextualized; the rest are never
+    // consulted once a match is found.
     // @phpstan-ignore-next-line
-    $stack1->expects($this->once())->method('contextualize')->with($context);
+    $stack_active->expects($this->once())->method('contextualize')->with($context);
     // @phpstan-ignore-next-line
-    $stack2->expects($this->once())->method('contextualize')->with($context);
+    $stack_other->expects($this->never())->method('contextualize');
     // @phpstan-ignore-next-line
     $stack_inactive->expects($this->never())->method('contextualize');
 
     Environment::init(
       contextualize: TRUE,
       platforms: [$platform],
-      stacks: [$stack1, $stack2, $stack_inactive],
+      stacks: [$stack_active, $stack_other, $stack_inactive],
       contexts: [$context],
     );
 
@@ -273,8 +275,8 @@ final class EnvironmentTest extends EnvironmentDetectorTestCase {
 
   public function testNoopContextualizeWithRealPlatformAndStack(): void {
     // An active platform and stack that both inherit the no-op contextualize()
-    // (Acquia and Docker) plus an active Drupal context exercise the abstract
-    // no-op path without injecting any platform/stack-specific settings.
+    // plus an active Drupal context exercise the abstract no-op path without
+    // injecting any platform/stack-specific settings.
     self::envSet('AH_SITE_ENVIRONMENT', 'prod');
     self::envSet('DOCKER', 'TRUE');
 
@@ -292,12 +294,33 @@ final class EnvironmentTest extends EnvironmentDetectorTestCase {
     $this->assertArrayNotHasKey('reverse_proxy', $settings);
   }
 
-  public function testGetActiveStacksReturnsActiveOnly(): void {
+  public function testGetActiveStackReturnsContainer(): void {
     self::envSet('DOCKER', 'TRUE');
 
-    $active_ids = array_map(static fn(StackInterface $stack): string => $stack->id(), Environment::getActiveStacks());
+    $this->assertSame('container', Environment::getActiveStack()?->id());
+  }
 
-    $this->assertSame(['docker'], $active_ids);
+  public function testGetActiveStackReturnsMostSpecificContainer(): void {
+    self::envSet('DOCKER', 'TRUE');
+    self::envSet('IS_DDEV_PROJECT', 'TRUE');
+
+    // The generic container is the fallback; a more specific container wins.
+    $this->assertSame('ddev', Environment::getActiveStack()?->id());
+  }
+
+  public function testGetActiveStackReturnsNullOnBareMetal(): void {
+    $this->assertNotInstanceOf(StackInterface::class, Environment::getActiveStack());
+  }
+
+  public function testActivePlatformWithContainerStack(): void {
+    self::envSet('DOCKER', 'TRUE');
+    self::envSet('AH_SITE_ENVIRONMENT', 'prod');
+
+    Environment::init(contextualize: FALSE);
+
+    $this->assertSame('acquia', Environment::getActivePlatform()?->id());
+    $this->assertSame(Environment::PRODUCTION, getenv('ENVIRONMENT_TYPE'));
+    $this->assertSame('container', Environment::getActiveStack()?->id());
   }
 
   #[DataProvider('dataProviderIsEnvironmentTypeMethods')]

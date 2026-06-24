@@ -16,8 +16,8 @@ use DrevOps\EnvironmentDetector\Platforms\PlatformInterface;
 use DrevOps\EnvironmentDetector\Platforms\PlatformSh;
 use DrevOps\EnvironmentDetector\Platforms\Skpr;
 use DrevOps\EnvironmentDetector\Platforms\Tugboat;
+use DrevOps\EnvironmentDetector\Stacks\Container;
 use DrevOps\EnvironmentDetector\Stacks\Ddev;
-use DrevOps\EnvironmentDetector\Stacks\Docker;
 use DrevOps\EnvironmentDetector\Stacks\Lando;
 use DrevOps\EnvironmentDetector\Stacks\StackInterface;
 
@@ -50,27 +50,26 @@ use DrevOps\EnvironmentDetector\Stacks\StackInterface;
  *
  * ** Stacks **
  *
- * A stack is an inner ring - the substrate the environment runs in (Docker,
- * DDEV, Lando). Stacks never carry the environment type and never collide with
- * a platform: Docker inside Acquia or Lando inside CI are just inner rings.
- * Multiple stacks can be active at the same time. Each active stack may
+ * A stack is an inner ring - the substrate the environment runs in (a
+ * container, or a more specific container). Stacks never carry the environment
+ * type and never collide with a platform: a container inside Acquia or inside
+ * CI is just an inner ring. At most one stack is active at a time - the most
+ * specific one that matches, or none on bare metal. The active stack may
  * contribute settings to the active context.
  *
  * ** Contexts **
  *
  * Contexts are the application/framework where settings land. A context applies
- * generic changes to the application; the active platform and every active
- * stack may then apply their own context-specific changes. For example, a
- * Drupal context applies changes to the global $settings array, while the
- * Lagoon platform's contextualize() adds Lagoon-specific changes to the same
- * array. At most one context can be active at a time.
+ * generic changes to the application; the active platform and the active stack
+ * may then apply their own context-specific changes on top of the same target.
+ * At most one context can be active at a time.
  *
  * The goal of this package is to have enough context changes to cover the most
  * common use cases, but also to allow adding custom contexts to cover the
  * specific use cases within the application.
  *
  * The discovered type is statically cached to be performant. The cache can be
- * reset using the ::reset() method, which resets the active platform, stacks
+ * reset using the ::reset() method, which resets the active platform, stack
  * and context and the registered platforms, stacks and contexts. Call
  * ::reset(TRUE) to also reset the fallback type.
  *
@@ -178,9 +177,9 @@ class Environment {
    * @var array<string>
    */
   protected const STACKS = [
-    Docker::class,
     Ddev::class,
     Lando::class,
+    Container::class,
   ];
 
   /**
@@ -208,6 +207,11 @@ class Environment {
    * @var \DrevOps\EnvironmentDetector\Platforms\PlatformInterface[]|null
    */
   protected static ?array $platforms = NULL;
+
+  /**
+   * The "active" stack. Only one stack can be active at a time.
+   */
+  protected static ?StackInterface $stack = NULL;
 
   /**
    * The list of registered stacks.
@@ -355,6 +359,7 @@ class Environment {
   public static function reset(bool $all = FALSE): void {
     static::$platform = NULL;
     static::$platforms = NULL;
+    static::$stack = NULL;
     static::$stacks = NULL;
     static::$context = NULL;
     static::$contexts = NULL;
@@ -380,7 +385,8 @@ class Environment {
       $platform = static::getActivePlatform();
 
       if ($platform instanceof PlatformInterface) {
-        // The platform owns the type; fall back only when it cannot name a tier.
+        // The platform owns the type; fall back only when it cannot name a
+        // tier.
         $type = $platform->type() ?: static::$fallback;
       }
       else {
@@ -422,13 +428,24 @@ class Environment {
   }
 
   /**
-   * Get the active stacks.
+   * Get the active stack.
    *
-   * @return \DrevOps\EnvironmentDetector\Stacks\StackInterface[]
-   *   An array of active stacks.
+   * @return \DrevOps\EnvironmentDetector\Stacks\StackInterface|null
+   *   The active stack or NULL if none is active.
    */
-  public static function getActiveStacks(): array {
-    return array_values(array_filter(static::collectStacks(), static fn(StackInterface $stack): bool => $stack->active()));
+  public static function getActiveStack(): ?StackInterface {
+    if (!static::$stack instanceof StackInterface) {
+      // Most-specific first; the generic fallback is registered last, so it is
+      // returned only when nothing more specific matched.
+      foreach (static::collectStacks() as $stack) {
+        if ($stack->active()) {
+          static::$stack = $stack;
+          break;
+        }
+      }
+    }
+
+    return static::$stack;
   }
 
   /**
@@ -528,6 +545,9 @@ class Environment {
     }
 
     static::$stacks[$stack->id()] = $stack;
+    // Reset the active stack to make sure it is recalculated based on the new
+    // stack.
+    static::$stack = NULL;
   }
 
   /**
@@ -541,9 +561,7 @@ class Environment {
       // Apply platform-specific context changes.
       static::getActivePlatform()?->contextualize($context);
       // Apply stack-specific context changes.
-      foreach (static::getActiveStacks() as $stack) {
-        $stack->contextualize($context);
-      }
+      static::getActiveStack()?->contextualize($context);
     }
   }
 
