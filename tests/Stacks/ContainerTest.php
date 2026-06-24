@@ -57,7 +57,7 @@ final class ContainerTest extends StackTestCase {
 
   public function testContextualizeNonDrupalIsNoop(): void {
     self::envSet('DOCKER', 'TRUE');
-    self::envSet('DRUPAL_DEV_TRUSTED_HOSTS', 'https://example.local,webserver');
+    self::envSet('DRUPAL_ENVIRONMENT_CONTAINER_TRUSTED_HOSTS', 'https://example.local,webserver');
 
     global $settings;
     $settings = [];
@@ -97,7 +97,7 @@ final class ContainerTest extends StackTestCase {
       function (): void {
           global $settings;
           $settings = ['hash_salt' => 'abc'];
-          self::envSet('DRUPAL_DEV_TRUSTED_HOSTS', 'https://mysite.local,webserver');
+          self::envSet('DRUPAL_ENVIRONMENT_CONTAINER_TRUSTED_HOSTS', 'https://mysite.local,webserver');
       },
         [
           'hash_salt' => 'abc',

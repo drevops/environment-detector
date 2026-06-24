@@ -68,10 +68,10 @@ class Container extends AbstractStack {
 
     global $settings;
 
-    // Build a trusted host pattern from a comma-separated list of local
-    // development hostnames or URLs (the dev domain plus any internal service
-    // names). Mirrors the LAGOON_ROUTES handling.
-    $hosts = getenv('DRUPAL_DEV_TRUSTED_HOSTS');
+    // Build a trusted host pattern from a comma-separated list of the
+    // container's hostnames or URLs (the site domain plus any internal
+    // service names). Mirrors the LAGOON_ROUTES handling.
+    $hosts = getenv('DRUPAL_ENVIRONMENT_CONTAINER_TRUSTED_HOSTS');
     if (is_string($hosts) && $hosts !== '') {
       $patterns = str_replace(['.', 'https://', 'http://', ','], [
         '\.', '', '', '|',
