@@ -60,7 +60,7 @@ If `ENVIRONMENT_TYPE` is already set, that value wins - handy for forcing a type
 
 A run is a set of nested rings, from an outer context down to the application:
 
-```
+```text
 ┌─ PLATFORM ── hosting (tiered) · CI (flat) · none ⇒ local ───────────────┐
 │   ┌─ STACK ── host · container · ddev · lando ──────────────────────┐   │
 │   │   ┌─ RUNTIME ── PHP 8.x ────────────────────────────────────┐   │   │

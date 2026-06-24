@@ -33,7 +33,7 @@ class DiscoveryBenchmark {
     // Add specified number of custom platforms.
     static $counter = 0;
     for ($i = 0; $i < intval($params['count']); $i++) {
-      $unique_id = 'test_platform_' . uniqid() . '_' . (++$counter);
+      $unique_id = 'test_platform_' . (++$counter);
       $platforms[] = new class($unique_id) implements PlatformInterface {
 
         public function __construct(
@@ -88,7 +88,7 @@ class DiscoveryBenchmark {
     // Add specified number of custom stacks.
     static $counter = 0;
     for ($i = 0; $i < intval($params['count']); $i++) {
-      $unique_id = 'test_stack_' . uniqid() . '_' . (++$counter);
+      $unique_id = 'test_stack_' . (++$counter);
       $stacks[] = new class($unique_id) implements StackInterface {
 
         public function __construct(
@@ -139,7 +139,7 @@ class DiscoveryBenchmark {
     // Add specified number of custom contexts.
     static $counter = 0;
     for ($i = 0; $i < intval($params['count']); $i++) {
-      $unique_id = 'test_context_' . uniqid() . '_' . (++$counter);
+      $unique_id = 'test_context_' . (++$counter);
       $contexts[] = new class($unique_id) implements ContextInterface {
 
         public function __construct(

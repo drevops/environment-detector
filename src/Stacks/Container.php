@@ -36,9 +36,13 @@ class Container extends AbstractStack {
       return TRUE;
     }
 
-    $cgroup = @file_get_contents('/proc/1/cgroup');
+    $cgroup = '';
+    if (is_readable('/proc/1/cgroup')) {
+      $content = file_get_contents('/proc/1/cgroup');
+      $cgroup = is_string($content) ? $content : '';
+    }
     // @codeCoverageIgnoreEnd
-    return $cgroup && (str_contains($cgroup, 'docker') || str_contains($cgroup, 'kubepods'));
+    return str_contains($cgroup, 'docker') || str_contains($cgroup, 'kubepods');
   }
 
 }

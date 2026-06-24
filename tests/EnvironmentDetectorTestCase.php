@@ -25,10 +25,25 @@ class EnvironmentDetectorTestCase extends TestCase {
 
     static::envUnset('ENVIRONMENT_TYPE');
 
-    // Unset all environment variables that might be set by the environment
-    // where these tests are running.
+    // Isolate detection from any platform or stack markers the host running
+    // these tests might already expose, so detection sees only what each test
+    // sets for itself.
+    static::envUnset('container');
+    static::envUnset('IS_DDEV_PROJECT');
+    static::envUnset('LANDO_INFO');
+    static::envUnsetPrefix('AH_');
+    static::envUnsetPrefix('LAGOON_');
+    static::envUnsetPrefix('ENVIRONMENT_');
+    static::envUnsetPrefix('PANTHEON_');
+    static::envUnsetPrefix('TERMINUS_');
+    static::envUnsetPrefix('PLATFORM_');
+    static::envUnsetPrefix('SKPR_');
+    static::envUnsetPrefix('TUGBOAT_');
+    static::envUnsetPrefix('CIRCLE');
+    static::envUnsetPrefix('GITLAB_');
     static::envUnsetPrefix('GITHUB_');
-    static::envUnsetPrefix('DOCKER_');
+    static::envUnsetPrefix('DDEV_');
+    static::envUnsetPrefix('DOCKER');
     static::envUnsetPrefix('RUNNER_');
     static::envUnsetPrefix('CI');
 
