@@ -39,11 +39,11 @@ class PlatformSh extends AbstractPlatform {
       return Environment::STAGE;
     }
 
-    // Beyond production and staging, Platform.sh types every per-branch
-    // environment as 'development'; an unrecognised type is left unresolved.
-    // Only the development branch is the development tier.
+    // Beyond production and staging, an environment not typed 'development' is
+    // not one of the persistent tiers, so it is an ephemeral preview. Only the
+    // development branch is the development tier.
     if ($env_type !== 'development') {
-      return NULL;
+      return Environment::PREVIEW;
     }
 
     if (getenv('PLATFORM_BRANCH') === static::DEVELOPMENT_BRANCH) {

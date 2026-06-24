@@ -25,10 +25,12 @@ final class LagoonTest extends PlatformTestCase {
   public static function dataProviderType(): array {
     // Each row is [LAGOON_ENVIRONMENT_TYPE, ENVIRONMENT_PRODUCTION_BRANCH,
     // LAGOON_GIT_BRANCH, expected type]. A value of 'unset' leaves that
-    // variable unset. Under env-type 'development', the branch decides the
-    // tier: the production branch is production; main/master (when not the
-    // production branch), release/* and hotfix/* are stage; 'develop' is
-    // development; anything else is an ephemeral preview.
+    // variable unset. Env-type 'production' is always production. Under
+    // env-type 'development', the branch decides the tier: the production
+    // branch is production; main/master (when not the production branch),
+    // release/* and hotfix/* are stage; 'develop' is development; anything
+    // else is an ephemeral preview. Any other env-type (including unset) is
+    // also a preview.
     $matrix = [
       ['development', 'master', 'master', Environment::PRODUCTION],
       ['development', 'master', 'main', Environment::STAGE],
@@ -72,13 +74,13 @@ final class LagoonTest extends PlatformTestCase {
       ['production', 'master', 'unset', Environment::PRODUCTION],
       ['production', 'unset', 'develop', Environment::PRODUCTION],
       ['production', 'unset', 'unset', Environment::PRODUCTION],
-      ['unset', 'master', 'master', NULL],
-      ['unset', 'master', 'develop', NULL],
-      ['unset', 'master', 'feature/foo', NULL],
-      ['unset', 'master', 'unset', NULL],
-      ['unset', 'unset', 'develop', NULL],
-      ['unset', 'unset', 'unset', NULL],
-      ['preview', 'unset', 'feature/foo', NULL],
+      ['unset', 'master', 'master', Environment::PREVIEW],
+      ['unset', 'master', 'develop', Environment::PREVIEW],
+      ['unset', 'master', 'feature/foo', Environment::PREVIEW],
+      ['unset', 'master', 'unset', Environment::PREVIEW],
+      ['unset', 'unset', 'develop', Environment::PREVIEW],
+      ['unset', 'unset', 'unset', Environment::PREVIEW],
+      ['preview', 'unset', 'feature/foo', Environment::PREVIEW],
     ];
 
     $data = [];
@@ -123,6 +125,10 @@ final class LagoonTest extends PlatformTestCase {
     $before();
 
     self::envSet('LAGOON_KUBERNETES', 'myproject');
+    // Resolve to the development tier so the context settings, not the type,
+    // are what these cases exercise.
+    self::envSet('LAGOON_ENVIRONMENT_TYPE', 'development');
+    self::envSet('LAGOON_GIT_BRANCH', 'develop');
     Environment::init();
 
     global $settings;

@@ -66,7 +66,10 @@ final class PlatformShTest extends PlatformTestCase {
     ];
     yield [
       fn() => self::envSet('PLATFORM_ENVIRONMENT_TYPE', 'qa'),
-      NULL,
+      Environment::PREVIEW,
+      function ($test): void {
+          $test->assertTrue(Environment::isPreview());
+      },
     ];
   }
 

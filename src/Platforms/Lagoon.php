@@ -37,11 +37,11 @@ class Lagoon extends AbstractPlatform {
       return Environment::PRODUCTION;
     }
 
-    // Lagoon only types environments as 'production' or 'development'; an
-    // unrecognised type is left unresolved. A 'development' environment is
-    // narrowed to a tier by its deployed branch below.
+    // Anything Lagoon does not type as 'production' or 'development' is not one
+    // of the persistent tiers, so it is an ephemeral preview. A 'development'
+    // environment is narrowed to a tier by its deployed branch below.
     if ($env_type !== 'development') {
-      return NULL;
+      return Environment::PREVIEW;
     }
 
     $branch = (string) getenv('LAGOON_GIT_BRANCH');

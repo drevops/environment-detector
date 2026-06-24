@@ -139,13 +139,13 @@ The name-based platforms (Acquia, Pantheon, Skpr) read an environment **name** -
 | Acquia | `AH_SITE_ENVIRONMENT` | `prod` | `stage`, `test` | `dev` | any other name (e.g. `ode*` on-demand) |
 | Pantheon | `PANTHEON_ENVIRONMENT` | `live` | `test` | `dev` | any other name (multidev) |
 | Skpr | `SKPR_ENV` | `prod` | `stg` | `dev` | any other name |
-| Lagoon | `LAGOON_KUBERNETES` | env-type `production`, or the `ENVIRONMENT_PRODUCTION_BRANCH` branch | `main`/`master`, `release/*`, `hotfix/*` | `develop` branch | env-type `development` on any other branch |
+| Lagoon | `LAGOON_ENVIRONMENT_TYPE` | env-type `production`, or the `ENVIRONMENT_PRODUCTION_BRANCH` branch | `main`/`master`, `release/*`, `hotfix/*` | `develop` branch | env-type `development` on any other branch |
 | Platform.sh | `PLATFORM_ENVIRONMENT_TYPE` | type `production` | type `staging` | type `development` on the `develop` branch | type `development` on any other branch |
 | Tugboat | `TUGBOAT_PREVIEW_ID` | - | - | - | always |
 
 On Lagoon, `main`/`master` resolve to `stage` unless one of them is named by `ENVIRONMENT_PRODUCTION_BRANCH`, in which case it is `production`. The branch names (`main`, `master`, `release/*`, `hotfix/*`, `develop`) are built-in conventions.
 
-When a branch-based platform reports an env-type it does not recognise, the [fallback](#configuration) (`development` by default) applies. The CI platforms - CircleCI, GitHub Actions, GitLab CI - always resolve to `ci`.
+Every built-in platform resolves to one of these tiers whenever it is active - an active environment it cannot place in a persistent tier (an unrecognised name or env-type) is a `preview`. The `development` [fallback](#configuration) applies only to custom platforms that return no type. The CI platforms - CircleCI, GitHub Actions, GitLab CI - always resolve to `ci`.
 
 Read the active platform:
 
