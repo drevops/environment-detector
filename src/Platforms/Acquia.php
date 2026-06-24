@@ -7,9 +7,7 @@ namespace DrevOps\EnvironmentDetector\Platforms;
 use DrevOps\EnvironmentDetector\Environment;
 
 /**
- * Acquia Cloud platform.
- *
- * Detects the Acquia Cloud environment type.
+ * Acquia Cloud hosting platform.
  *
  * @package DrevOps\EnvironmentDetector\Platforms
  */

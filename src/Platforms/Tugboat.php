@@ -7,9 +7,7 @@ namespace DrevOps\EnvironmentDetector\Platforms;
 use DrevOps\EnvironmentDetector\Environment;
 
 /**
- * Tugboat platform.
- *
- * Detects the Tugboat environment type.
+ * Tugboat preview-environment platform.
  *
  * @package DrevOps\EnvironmentDetector\Platforms
  */
@@ -31,6 +29,8 @@ class Tugboat extends AbstractPlatform {
    * {@inheritdoc}
    */
   public function type(): ?string {
+    // Tugboat only builds ephemeral per-branch and per-PR environments, so the
+    // tier is always preview.
     return Environment::PREVIEW;
   }
 

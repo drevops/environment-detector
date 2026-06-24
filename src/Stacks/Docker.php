@@ -22,6 +22,9 @@ class Docker extends AbstractStack {
    * {@inheritdoc}
    */
   public function active(): bool {
+    // No single marker reliably proves containerisation across runtimes, so
+    // probe several independent signals in turn: env vars set by tooling, the
+    // engine-created marker files, then the control group of PID 1.
     if (getenv('DOCKER') !== FALSE) {
       return TRUE;
     }

@@ -9,9 +9,7 @@ use DrevOps\EnvironmentDetector\Contexts\Drupal;
 use DrevOps\EnvironmentDetector\Environment;
 
 /**
- * Lagoon platform.
- *
- * Detects the Lagoon environment type.
+ * Lagoon hosting platform.
  *
  * @package DrevOps\EnvironmentDetector\Platforms
  */
@@ -86,7 +84,9 @@ class Lagoon extends AbstractPlatform {
     // Public Lagoon URL.
     $settings['trusted_host_patterns'][] = '^.+\.au\.amazee\.io$';
 
-    // Lagoon routes.
+    // Turn the comma-separated LAGOON_ROUTES URL list into one anchored
+    // trusted-host regex: escape dots, drop the scheme, and let the commas
+    // become regex alternation.
     $routes = getenv('LAGOON_ROUTES');
     if (!empty($routes) && is_string($routes)) {
       $patterns = str_replace(['.', 'https://', 'http://', ','], [

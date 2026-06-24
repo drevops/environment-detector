@@ -7,9 +7,7 @@ namespace DrevOps\EnvironmentDetector\Platforms;
 use DrevOps\EnvironmentDetector\Environment;
 
 /**
- * Pantheon platform.
- *
- * Detects the Pantheon environment type.
+ * Pantheon hosting platform.
  *
  * @package DrevOps\EnvironmentDetector\Platforms
  */

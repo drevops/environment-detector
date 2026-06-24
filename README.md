@@ -19,16 +19,13 @@
 
 ---
 
-## Features
+Answers one question, with no configuration: **what kind of environment is this code running in?** It maps the host you are on to a single environment type - `local`, `ci`, `development`, `preview`, `stage`, or `production` - across common hosting providers, CI services, and local stacks.
 
-- Detects environment type: `local`, `ci`, `dev`, `preview`, `stage`, `prod`, or user-defined
-- Supports many popular hosting and CI platforms out-of-the-box: [Acquia](src/Platforms/Acquia.php), [CircleCI](src/Platforms/CircleCi.php), [GitHub Actions](src/Platforms/GitHubActions.php), [GitLab CI](src/Platforms/GitLabCi.php), [Lagoon](src/Platforms/Lagoon.php), [Pantheon](src/Platforms/Pantheon.php), [Platform.sh](src/Platforms/PlatformSh.php), [Skpr](src/Platforms/Skpr.php), [Tugboat](src/Platforms/Tugboat.php)
-- Detects development stacks: [Docker](src/Stacks/Docker.php), [DDEV](src/Stacks/Ddev.php), [Lando](src/Stacks/Lando.php)
-- Detects application contexts: [Drupal](src/Contexts/Drupal.php) (more to come)
-- Simple API for checking current environment
-- Extendable via custom platforms, stacks and contexts
-- Fallback support for precise control
-- Optimised for performance with static caching
+- Zero configuration: a single call detects and caches the type.
+- Recognises hosting platforms (Acquia, Lagoon, Pantheon, Platform.sh, Skpr, Tugboat) and CI services (GitHub Actions, GitLab CI, CircleCI).
+- Recognises local stacks (Docker, DDEV, Lando).
+- Applies framework-specific settings through contexts (Drupal).
+- Extendable with custom platforms, stacks, and contexts, with a safe fallback type.
 
 ## Installation
 
@@ -36,36 +33,32 @@
 composer require drevops/environment-detector
 ```
 
-## Quick Start
+## Quick start
 
 ```php
 use DrevOps\EnvironmentDetector\Environment;
-
-Environment::init();
-if (getenv('ENVIRONMENT_TYPE') === Environment::LOCAL) {
-  // Apply local settings.
-}
-```
-
-Alternatively, use the convenience methods:
-
-```php
-use DrevOps\EnvironmentDetector\Environment;
-
-// No need to init() - a first call to is*() will auto-initialize.
-if (Environment::isLocal()) {
-  // Apply local settings.
-}
 
 if (Environment::isProd()) {
   // Apply production settings.
 }
 ```
 
-## Architecture
+The first call auto-detects and caches the result. The full set is `isLocal()`, `isCi()`, `isDev()`, `isPreview()`, `isStage()`, `isProd()`, plus `Environment::is('custom-type')` for custom types.
 
-Detection is modelled as nested rings. A run wraps from an outer ring down to
-the application:
+The detected type is also written to the `ENVIRONMENT_TYPE` environment variable:
+
+```php
+Environment::init();
+if (getenv('ENVIRONMENT_TYPE') === Environment::PRODUCTION) {
+  // ...
+}
+```
+
+If `ENVIRONMENT_TYPE` is already set, that value wins - handy for forcing a type while debugging.
+
+## How it works
+
+A run is a set of nested rings, from an outer context down to the application:
 
 ```
 ┌─ PLATFORM ── hosting (tiered) · CI (flat) · none ⇒ local ───────────────┐
@@ -78,77 +71,37 @@ the application:
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Platform** is the outermost ring and the only one that decides the
-  environment type: hosting maps to `production`/`stage`/`development`/`preview`,
-  CI maps to `ci`, and no platform at all means `local`.
-- **Stack** is the substrate the platform runs in (`docker`/`ddev`/`lando`). It
-  nests inside a platform and never decides the type - it only contributes
-  settings.
-- **Context** is the app/framework (e.g. Drupal) where settings are applied.
-- **Runtime** (PHP) is shown only to complete the picture; it is not modelled.
+- **Platform** - the outermost ring, and the *only* one that decides the type. A hosting platform maps to `production`/`stage`/`development`/`preview`; a CI platform maps to `ci`; with no platform at all the type is `local` (or `ci` when a generic `CI` signal is present).
+- **Stack** - the substrate the run sits in (`docker`, `ddev`, `lando`). A stack nests inside a platform, never decides the type, and only contributes settings.
+- **Context** - the application/framework (e.g. Drupal) that detected settings are applied to.
+- **Runtime** (PHP) is shown only to complete the picture; it is not detected.
 
-Two rules follow from this:
+Two rules follow:
 
-1. **Exactly one platform is active at a time.** Two active platforms (for
-   example Acquia *and* Lagoon) is a real misconfiguration and throws.
-2. **Stacks may co-exist.** Docker inside Acquia, or Lando inside CI, are just
-   inner rings - they never collide with the platform and simply contribute
-   their settings.
+1. **At most one platform is active.** Two active platforms (say Acquia *and* Lagoon) is a genuine misconfiguration and throws.
+2. **Stacks may co-exist.** Docker inside Acquia, or Lando inside CI, are just inner rings - they never collide with the platform; each active stack simply contributes its settings.
 
-### How detection works
+When a context is active, it applies its generic settings first, then the active platform and every active stack apply their own on top. This happens even when the type was pre-set via `ENVIRONMENT_TYPE`.
 
-1. **Platform detection:** Each platform checks for environment-specific
-   variables or files to identify itself. The single active platform maps its
-   internal state to a type like `dev`, `prod`, or a custom type. With no active
-   platform, the type is `ci` when a generic `CI` signal is present, otherwise
-   `local`.
-2. **Stack detection:** Every active stack is detected independently of the
-   platform.
-3. **Contextualization:** Optionally applies framework-specific changes. The
-   active context applies its generic changes first (e.g. modify the Drupal
-   `$settings` global to add `$settings['environment']`), then the active
-   platform and every active stack apply their own context-specific changes.
+## Configuration
 
-The resolved type is stored in the `ENVIRONMENT_TYPE` env var. If already set,
-this value takes precedence over detection. The `contextualize` step still
-applies context changes even if the type is pre-set via environment variable.
-
-## Advanced Usage
-
-### Advanced initialization with customization
+`init()` is optional - the `is*()` methods initialise on first use. Call it directly only to register custom detectors or change the fallback:
 
 ```php
 Environment::init(
-  contextualize: TRUE,                            // Whether to apply the context automatically
-  fallback: Environment::DEVELOPMENT,             // The fallback environment type
-  platforms: [new MyCustomPlatform()],            // Additional platform instances
-  stacks: [new MyCustomStack()],                  // Additional stack instances
-  contexts: [new MyCustomContext()],              // Additional context instances
+  contextualize: TRUE,                 // Apply context settings automatically (default).
+  fallback: Environment::DEVELOPMENT,  // Type used when a platform cannot name its tier.
+  platforms: [new MyHostingPlatform()],
+  stacks: [new MyStack()],
+  contexts: [new MyContext()],
 );
 ```
 
-### Fallback Type
-
-If an active platform cannot determine the environment type, a fallback
-`Environment::DEVELOPMENT` will be returned by default. This is to ensure that, in case of
-misconfiguration, the application does not apply local settings in production or production
-settings in local - 'development' type is the safest default.
-
-You can set a different fallback type during initialization:
-
-```php
-Environment::init(fallback: Environment::PRODUCTION);
-```
+The fallback (`development` by default) applies only when a platform is active but cannot resolve a tier - it is never used to silently downgrade a known environment. It guards against applying local settings in production, or production settings locally.
 
 ## Platforms
 
-A platform is the outermost ring and the only one that decides the environment
-type. Exactly one platform can be active at a time - if two match, an exception
-is thrown (a real misconfiguration). If none match, the type is `ci` when a
-generic `CI` signal is present, otherwise `local`. Register custom platforms
-using `init(platforms: [new MyCustomPlatform()])`.
-
-Supported built-ins:
+A platform is the outermost ring and the only one that decides the type. Built-ins:
 
 - [Acquia](src/Platforms/Acquia.php)
 - [CircleCI](src/Platforms/CircleCi.php)
@@ -160,19 +113,17 @@ Supported built-ins:
 - [Skpr](src/Platforms/Skpr.php)
 - [Tugboat](src/Platforms/Tugboat.php)
 
-### Accessing the active platform
+Read the active platform:
 
 ```php
-// Initialize first to detect the active platform.
 Environment::init();
 
-$platform = Environment::getActivePlatform();
-if ($platform && $platform->id() === 'acquia') {
+if (Environment::getActivePlatform()?->id() === 'acquia') {
   // Acquia-specific logic.
 }
 ```
 
-### Adding a custom platform
+Add your own by implementing `PlatformInterface`:
 
 ```php
 use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
@@ -198,31 +149,24 @@ class CustomHosting implements PlatformInterface {
   }
 
   public function contextualize(ContextInterface $context): void {
-    // Optional: Apply platform-specific context changes.
+    // Optional: apply platform-specific context changes.
   }
 }
 
-// Register the custom platform during initialization.
 Environment::init(platforms: [new CustomHosting()]);
 ```
 
 ## Stacks
 
-A stack is the substrate the platform runs in. Stacks never carry the environment
-type and may co-exist - Docker inside Acquia or Lando inside CI are just inner
-rings. Each active stack may contribute settings to the active context. Register
-custom stacks using `init(stacks: [new MyCustomStack()])`.
-
-Supported built-ins:
+A stack is the substrate the run sits in. Stacks never decide the type and may co-exist. Built-ins:
 
 - [Docker](src/Stacks/Docker.php)
 - [DDEV](src/Stacks/Ddev.php)
 - [Lando](src/Stacks/Lando.php)
 
-### Accessing active stacks
+Read the active stacks:
 
 ```php
-// Initialize first to detect the active stacks.
 Environment::init();
 
 foreach (Environment::getActiveStacks() as $stack) {
@@ -232,7 +176,7 @@ foreach (Environment::getActiveStacks() as $stack) {
 }
 ```
 
-### Adding a custom stack
+Add your own by implementing `StackInterface`:
 
 ```php
 use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
@@ -248,28 +192,18 @@ class CustomStack implements StackInterface {
   }
 
   public function contextualize(ContextInterface $context): void {
-    // Optional: Apply stack-specific context changes.
+    // Optional: apply stack-specific context changes.
   }
 }
 
-// Register the custom stack during initialization.
 Environment::init(stacks: [new CustomStack()]);
 ```
 
 ## Contexts
 
-Contexts apply environment-specific changes to frameworks or applications. A context
-applies generic changes to the application; the active platform and every active stack may
-then apply their own context-specific changes.
+A context is the framework or application that detected settings are applied to. The [Drupal](src/Contexts/Drupal.php) context, for example, writes to the global `$settings` array; the active platform and stacks then layer their own changes on top (the Lagoon platform, say, adds its reverse-proxy and trusted-host settings).
 
-For example, a **Drupal** context applies changes to the global `$settings` array, while
-the **Lagoon** platform's `contextualize()` method adds Lagoon-specific changes to the same
-array.
-
-The goal is to have enough context changes to cover the most common use cases, but also
-to allow adding custom contexts to cover specific use cases within the application.
-
-### Adding a custom context
+Add your own by implementing `ContextInterface`:
 
 ```php
 use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
@@ -284,13 +218,11 @@ class CustomContext implements ContextInterface {
   }
 
   public function contextualize(): void {
-    // Apply generic context changes.
     global $configuration;
     $configuration['custom_value'] = $_SERVER['custom_value'] ?? 'default';
   }
 }
 
-// Register the custom context during initialization.
 Environment::init(contexts: [new CustomContext()]);
 ```
 

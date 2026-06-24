@@ -10,9 +10,7 @@ use DrevOps\EnvironmentDetector\Environment;
 use Skpr\SkprConfig;
 
 /**
- * Skpr platform.
- *
- * Detects the Skpr environment type.
+ * Skpr hosting platform.
  *
  * @package DrevOps\EnvironmentDetector\Platforms
  */

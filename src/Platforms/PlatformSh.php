@@ -7,9 +7,7 @@ namespace DrevOps\EnvironmentDetector\Platforms;
 use DrevOps\EnvironmentDetector\Environment;
 
 /**
- * Platform.sh platform.
- *
- * Detects the Platform.sh environment type.
+ * Platform.sh hosting platform.
  *
  * @package DrevOps\EnvironmentDetector\Platforms
  */

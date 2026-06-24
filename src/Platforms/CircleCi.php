@@ -7,9 +7,7 @@ namespace DrevOps\EnvironmentDetector\Platforms;
 use DrevOps\EnvironmentDetector\Environment;
 
 /**
- * CircleCi platform.
- *
- * Detects the CircleCi environment type.
+ * CircleCI continuous integration platform.
  *
  * @package DrevOps\EnvironmentDetector\Platforms
  */

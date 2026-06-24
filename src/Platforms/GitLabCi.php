@@ -7,9 +7,7 @@ namespace DrevOps\EnvironmentDetector\Platforms;
 use DrevOps\EnvironmentDetector\Environment;
 
 /**
- * GitLabCi platform.
- *
- * Detects the GitLabCi environment type.
+ * GitLab CI continuous integration platform.
  *
  * @package DrevOps\EnvironmentDetector\Platforms
  */

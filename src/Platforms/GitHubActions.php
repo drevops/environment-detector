@@ -7,9 +7,7 @@ namespace DrevOps\EnvironmentDetector\Platforms;
 use DrevOps\EnvironmentDetector\Environment;
 
 /**
- * GitHubActions platform.
- *
- * Detects the GitHubActions environment type.
+ * GitHub Actions continuous integration platform.
  *
  * @package DrevOps\EnvironmentDetector\Platforms
  */

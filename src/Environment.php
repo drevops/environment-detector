@@ -380,9 +380,12 @@ class Environment {
       $platform = static::getActivePlatform();
 
       if ($platform instanceof PlatformInterface) {
+        // The platform owns the type; fall back only when it cannot name a tier.
         $type = $platform->type() ?: static::$fallback;
       }
       else {
+        // No platform matched: the run is local, or ci when a generic CI signal
+        // is present.
         $type = getenv('CI') ? self::CI : self::LOCAL;
       }
 
