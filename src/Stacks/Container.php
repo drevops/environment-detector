@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Stacks;
 
+use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
+use DrevOps\EnvironmentDetector\Contexts\Drupal;
+
 /**
  * Container stack (generic containerisation).
  *
@@ -53,6 +56,28 @@ class Container extends AbstractStack {
     }
     // @codeCoverageIgnoreEnd
     return str_contains($cgroup, 'docker') || str_contains($cgroup, 'kubepods');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function contextualize(ContextInterface $context): void {
+    if (!$context instanceof Drupal) {
+      return;
+    }
+
+    global $settings;
+
+    // Build a trusted host pattern from a comma-separated list of local
+    // development hostnames or URLs (the dev domain plus any internal service
+    // names). Mirrors the LAGOON_ROUTES handling.
+    $hosts = getenv('DRUPAL_DEV_TRUSTED_HOSTS');
+    if (is_string($hosts) && $hosts !== '') {
+      $patterns = str_replace(['.', 'https://', 'http://', ','], [
+        '\.', '', '', '|',
+      ], $hosts);
+      $settings['trusted_host_patterns'][] = '^(' . $patterns . ')$';
+    }
   }
 
 }

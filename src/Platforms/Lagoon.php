@@ -81,8 +81,16 @@ class Lagoon extends AbstractPlatform {
     // URL when accessed from PHP processes in Lagoon.
     $settings['trusted_host_patterns'][] = '^nginx\-php$';
 
-    // Public Lagoon URL.
-    $settings['trusted_host_patterns'][] = '^.+\.au\.amazee\.io$';
+    // Public Lagoon URL. The amazee.io region defaults to 'au' for backward
+    // compatibility; set LAGOON_AMAZEEIO_REGION to another region code, or to
+    // an empty string to skip this pattern.
+    $region = getenv('LAGOON_AMAZEEIO_REGION');
+    if ($region === FALSE) {
+      $region = 'au';
+    }
+    if ($region !== '') {
+      $settings['trusted_host_patterns'][] = '^.+\.' . preg_quote($region, '/') . '\.amazee\.io$';
+    }
 
     // Turn the comma-separated LAGOON_ROUTES URL list into one anchored
     // trusted-host regex: escape dots, drop the scheme, and let the commas
