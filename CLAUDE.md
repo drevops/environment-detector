@@ -46,10 +46,10 @@ Detection is modelled as nested rings. A run wraps from an outer ring down to th
 - Platforms map internal states to standard types: `local`, `ci`, `development`, `preview`, `stage`, `production`
 
 **Stack System (`src/Stacks/`)**
-- Inner ring - the substrate the environment runs in (a container, or a more specific container like DDEV or Lando)
-- A specific container extends `Container`; `Container` is the generic fallback and is registered last
+- Inner ring - the substrate the environment runs in (the native host, a container, or a more specific container like DDEV or Lando)
+- A specific container extends `Container`; `Container` is the generic container fallback, and `Native` (the bare-metal host) is registered last so a stack is always active
 - Stacks never carry the environment type (no `type()`) and never collide with a platform
-- Exactly one stack is active (the most specific container that matches), or none on bare metal; the active stack may contribute settings
+- Exactly one stack is always active - the most specific container that matches, or the native host on bare metal; the active stack may contribute settings
 
 **Context System (`src/Contexts/`)**
 - The app/framework where settings land - apply changes after environment detection
@@ -117,7 +117,7 @@ src/
 │   ├── PlatformInterface.php
 │   ├── AbstractPlatform.php
 │   └── [SpecificPlatform].php
-├── Stacks/                  # Inner ring - substrate (container/ddev/lando); no type
+├── Stacks/                  # Inner ring - substrate (native/container/ddev/lando); no type
 │   ├── StackInterface.php
 │   ├── AbstractStack.php
 │   └── [SpecificStack].php

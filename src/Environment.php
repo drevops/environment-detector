@@ -19,6 +19,7 @@ use DrevOps\EnvironmentDetector\Platforms\Tugboat;
 use DrevOps\EnvironmentDetector\Stacks\Container;
 use DrevOps\EnvironmentDetector\Stacks\Ddev;
 use DrevOps\EnvironmentDetector\Stacks\Lando;
+use DrevOps\EnvironmentDetector\Stacks\Native;
 use DrevOps\EnvironmentDetector\Stacks\StackInterface;
 
 /**
@@ -53,9 +54,10 @@ use DrevOps\EnvironmentDetector\Stacks\StackInterface;
  * A stack is an inner ring - the substrate the environment runs in (a
  * container, or a more specific container). Stacks never carry the environment
  * type and never collide with a platform: a container inside Acquia or inside
- * CI is just an inner ring. At most one stack is active at a time - the most
- * specific one that matches, or none on bare metal. The active stack may
- * contribute settings to the active context.
+ * CI is just an inner ring. The substrate is always resolved: exactly one stack
+ * is active at a time - the most specific container that matches, or the native
+ * host on bare metal. The active stack may contribute settings to the active
+ * context.
  *
  * ** Contexts **
  *
@@ -172,7 +174,7 @@ class Environment {
   ];
 
   /**
-   * Pre-defined stack classes.
+   * Pre-defined stack classes, ordered most specific first.
    *
    * @var array<string>
    */
@@ -435,8 +437,9 @@ class Environment {
    */
   public static function getActiveStack(): ?StackInterface {
     if (!static::$stack instanceof StackInterface) {
-      // Most-specific first; the generic fallback is registered last, so it is
-      // returned only when nothing more specific matched.
+      // Registered most-specific first, so the first match is the narrowest
+      // that applies: a specific container, then the generic container, then
+      // the native host as the last-resort fallback.
       foreach (static::collectStacks() as $stack) {
         // A container-family stack only counts when actually inside a
         // container, so its own marker alone cannot win on bare metal.
@@ -518,7 +521,10 @@ class Environment {
     if (!static::$stacks) {
       static::$stacks = [];
 
-      $instances = array_merge(self::STACKS, $additional);
+      // Native is appended after any additional stacks so it stays the
+      // last-resort fallback: a user-supplied stack can win, but on bare metal
+      // - where nothing else matches - the native host always does.
+      $instances = array_merge(self::STACKS, $additional, [Native::class]);
 
       foreach ($instances as $instance) {
         $instance = is_string($instance) ? new $instance() : $instance;

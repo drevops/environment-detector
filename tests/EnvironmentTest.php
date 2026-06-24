@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Tests;
 
-use DrevOps\EnvironmentDetector\Stacks\StackInterface;
 use DrevOps\EnvironmentDetector\Contexts\AbstractContext;
 use DrevOps\EnvironmentDetector\Environment;
 use DrevOps\EnvironmentDetector\Platforms\AbstractPlatform;
@@ -308,8 +307,8 @@ final class EnvironmentTest extends EnvironmentDetectorTestCase {
     $this->assertSame('ddev', Environment::getActiveStack()?->id());
   }
 
-  public function testGetActiveStackReturnsNullOnBareMetal(): void {
-    $this->assertNotInstanceOf(StackInterface::class, Environment::getActiveStack());
+  public function testGetActiveStackReturnsNativeOnBareMetal(): void {
+    $this->assertSame('native', Environment::getActiveStack()?->id());
   }
 
   public function testActivePlatformWithContainerStack(): void {
