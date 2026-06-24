@@ -58,7 +58,7 @@ If `ENVIRONMENT_TYPE` is already set, that value wins - handy for forcing a type
 
 ## Environment types
 
-Detection always resolves to exactly one of these types:
+The built-in detectors resolve to one of these types (a custom platform can return its own, read via `Environment::is('custom-type')`):
 
 | Type | What it is | Lifespan |
 |------|-----------|----------|
