@@ -24,10 +24,30 @@ final class PlatformShTest extends PlatformTestCase {
       NULL,
     ];
     yield [
-      fn() => self::envSet('PLATFORM_ENVIRONMENT_TYPE', 'development'),
+      fn() => self::envSetMultiple([
+        'PLATFORM_ENVIRONMENT_TYPE' => 'development',
+        'PLATFORM_BRANCH' => 'develop',
+      ]),
       Environment::DEVELOPMENT,
       function ($test): void {
           $test->assertTrue(Environment::isDev());
+      },
+    ];
+    yield [
+      fn() => self::envSetMultiple([
+        'PLATFORM_ENVIRONMENT_TYPE' => 'development',
+        'PLATFORM_BRANCH' => 'feature/foo',
+      ]),
+      Environment::PREVIEW,
+      function ($test): void {
+          $test->assertTrue(Environment::isPreview());
+      },
+    ];
+    yield [
+      fn() => self::envSet('PLATFORM_ENVIRONMENT_TYPE', 'development'),
+      Environment::PREVIEW,
+      function ($test): void {
+          $test->assertTrue(Environment::isPreview());
       },
     ];
     yield [
@@ -42,6 +62,13 @@ final class PlatformShTest extends PlatformTestCase {
       Environment::PRODUCTION,
       function ($test): void {
           $test->assertTrue(Environment::isProd());
+      },
+    ];
+    yield [
+      fn() => self::envSet('PLATFORM_ENVIRONMENT_TYPE', 'qa'),
+      Environment::PREVIEW,
+      function ($test): void {
+          $test->assertTrue(Environment::isPreview());
       },
     ];
   }

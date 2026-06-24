@@ -21,6 +21,11 @@ abstract class AbstractPlatform implements PlatformInterface {
   public const ID = 'undefined';
 
   /**
+   * The Git branch name that designates the development environment.
+   */
+  protected const DEVELOPMENT_BRANCH = 'develop';
+
+  /**
    * {@inheritdoc}
    */
   public function id(): string {

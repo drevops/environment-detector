@@ -15,6 +15,7 @@
 ![LICENSE](https://img.shields.io/github/license/drevops/environment-detector)
 ![Renovate](https://img.shields.io/badge/renovate-enabled-green?logo=renovatebot)
 
+[![Vortex Ecosystem](https://img.shields.io/badge/%F0%9F%8C%80-Vortex%20Ecosystem-2C5A68?style=for-the-badge&labelColor=65ACBC)](https://github.com/drevops/vortex)
 </div>
 
 ---
@@ -130,18 +131,22 @@ A platform is the outermost ring and the only one that decides the type. Built-i
 
 ### How platforms map to types
 
-Each hosting platform reads its own signal (usually an environment variable) and maps it to a type. When a hosting platform is active but its value is unrecognised, the [fallback](#configuration) (`development` by default) applies - except where the table notes otherwise.
+Each hosting platform maps its own signal to a type. `preview` is the catch-all: any environment a platform spins up that it cannot place in one of the three persistent tiers (`production`, `stage`, `development`) is treated as an ephemeral, per-branch or per-PR build.
+
+The name-based platforms (Acquia, Pantheon, Skpr) read an environment **name** - recognised names map to a persistent tier, and any other name is a `preview`. The branch-based platforms (Lagoon, Platform.sh) type an environment as production or non-production, then resolve the exact tier from the deployed Git branch: the `develop` branch is `development`, and any other non-production, non-stage branch is a `preview`.
 
 | Platform | Signal | `production` | `stage` | `development` | `preview` |
 |----------|--------|--------------|---------|---------------|-----------|
-| Acquia | `AH_SITE_ENVIRONMENT` | `prod` | `stage`, `test` | `dev` | `ode*` (on-demand) |
-| Lagoon | `LAGOON_KUBERNETES` | env-type `production`, or branch matching `ENVIRONMENT_PRODUCTION_BRANCH` | `main`/`master`, `release/*`, `hotfix/*` | env-type `development` | - |
-| Pantheon | `PANTHEON_ENVIRONMENT` | `live` | `test` | `dev` | any other value (multidev); no fallback |
-| Platform.sh | `PLATFORM_ENVIRONMENT_TYPE` | `production` | `staging` | `development` | - |
-| Skpr | `SKPR_ENV` | `prod` | `stg` | `dev` | - |
+| Acquia | `AH_SITE_ENVIRONMENT` | `prod` | `stage`, `test` | `dev` | any other name (e.g. `ode*` on-demand) |
+| Pantheon | `PANTHEON_ENVIRONMENT` | `live` | `test` | `dev` | any other name (multidev) |
+| Skpr | `SKPR_ENV` | `prod` | `stg` | `dev` | any other name |
+| Lagoon | `LAGOON_ENVIRONMENT_TYPE` | env-type `production`, or the `ENVIRONMENT_PRODUCTION_BRANCH` branch | `main`/`master`, `release/*`, `hotfix/*` | `develop` branch | env-type `development` on any other branch |
+| Platform.sh | `PLATFORM_ENVIRONMENT_TYPE` | type `production` | type `staging` | type `development` on the `develop` branch | type `development` on any other branch |
 | Tugboat | `TUGBOAT_PREVIEW_ID` | - | - | - | always |
 
-The CI platforms - CircleCI, GitHub Actions, GitLab CI - always resolve to `ci`.
+On Lagoon, `main`/`master` resolve to `stage` unless one of them is named by `ENVIRONMENT_PRODUCTION_BRANCH`, in which case it is `production`. The branch names (`main`, `master`, `release/*`, `hotfix/*`, `develop`) are built-in conventions.
+
+Every built-in platform resolves to one of these tiers whenever it is active - an active environment it cannot place in a persistent tier (an unrecognised name or env-type) is a `preview`. The `development` [fallback](#configuration) applies only to custom platforms that return no type. The CI platforms - CircleCI, GitHub Actions, GitLab CI - always resolve to `ci`.
 
 Read the active platform:
 
