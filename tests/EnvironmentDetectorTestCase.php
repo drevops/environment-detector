@@ -72,8 +72,8 @@ class EnvironmentDetectorTestCase extends TestCase {
   protected function requireBareMetalHost(): void {
     $active_stack_id = Environment::getActiveStack()?->id();
 
-    // Probing cached the resolved stack; clear it so a later init() re-registers
-    // its own stacks from scratch instead of returning this stale result.
+    // Probing cached the resolved stack; clear it so a later init()
+    // re-registers its own stacks instead of returning this stale result.
     Environment::reset();
 
     if ($active_stack_id !== 'native') {
