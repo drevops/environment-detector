@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace DrevOps\EnvironmentDetector\Contexts;
+namespace DrevOps\EnvironmentDetector\Tests\Fixtures;
+
+use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 
 /**
- * Abstract context.
- *
- * All contexts should extend this class.
- *
- * @package DrevOps\EnvironmentDetector\Contexts
+ * A minimal non-Drupal context used to exercise platform/stack guards.
  */
-abstract class AbstractContext implements ContextInterface {
-
-  /**
-   * Context ID. Contexts should override this constant.
-   */
-  public const ID = 'undefined';
+class NotDrupalContext implements ContextInterface {
 
   /**
    * {@inheritdoc}
    */
   public function id(): string {
-    return static::ID;
+    return 'not_drupal';
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function active(): bool {
+    return TRUE;
   }
 
   /**
@@ -31,11 +31,9 @@ abstract class AbstractContext implements ContextInterface {
   // phpcs:disable DrupalPractice.Commenting.CommentEmptyLine.SpacingAfter
   // phpcs:disable Drupal.Commenting.FunctionComment.WrongStyle
   // phpcs:disable Squiz.WhiteSpace.FunctionSpacing.After
-  // @codeCoverageIgnoreStart
   public function contextualize(): void {
     // Noop.
   }
-  // @codeCoverageIgnoreEnd
   // phpcs:enable DrupalPractice.Commenting.CommentEmptyLine.SpacingAfter
   // phpcs:enable Drupal.Commenting.FunctionComment.WrongStyle
   // phpcs:enable Squiz.WhiteSpace.FunctionSpacing.After

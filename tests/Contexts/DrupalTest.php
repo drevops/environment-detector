@@ -54,7 +54,9 @@ final class DrupalTest extends ContextTestCase {
       },
       function (ContextTestCase $context_test_case): void {
           global $settings;
-          $context_test_case->assertEquals(Environment::DEVELOPMENT, $settings['environment']);
+          // No active platform and no CI signal resolves to a local type, which
+          // the Drupal context writes into $settings['environment'].
+          $context_test_case->assertEquals(Environment::LOCAL, $settings['environment']);
       },
     ];
   }
