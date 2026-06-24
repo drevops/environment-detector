@@ -58,7 +58,7 @@ final class SkprTest extends PlatformTestCase {
       fn(): null => self::envSetMultiple([
         'SKPR_ENV' => 'custom',
       ]),
-      NULL,
+      Environment::PREVIEW,
     ];
   }
 

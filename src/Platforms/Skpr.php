@@ -32,13 +32,13 @@ class Skpr extends AbstractPlatform {
    * {@inheritdoc}
    */
   public function type(): ?string {
-    $type = getenv('SKPR_ENV');
-
-    return match ($type) {
+    // Any other value is an environment with an arbitrary name, which is
+    // ephemeral by nature - a preview.
+    return match (getenv('SKPR_ENV')) {
       'prod' => Environment::PRODUCTION,
       'stg' => Environment::STAGE,
       'dev' => Environment::DEVELOPMENT,
-      default => NULL,
+      default => Environment::PREVIEW,
     };
   }
 

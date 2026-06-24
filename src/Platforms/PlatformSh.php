@@ -29,12 +29,29 @@ class PlatformSh extends AbstractPlatform {
    * {@inheritdoc}
    */
   public function type(): ?string {
-    return match (getenv('PLATFORM_ENVIRONMENT_TYPE')) {
-      'development' => Environment::DEVELOPMENT,
-      'staging' => Environment::STAGE,
-      'production' => Environment::PRODUCTION,
-      default => NULL,
-    };
+    $env_type = getenv('PLATFORM_ENVIRONMENT_TYPE');
+
+    if ($env_type === 'production') {
+      return Environment::PRODUCTION;
+    }
+
+    if ($env_type === 'staging') {
+      return Environment::STAGE;
+    }
+
+    // Beyond production and staging, Platform.sh types every per-branch
+    // environment as 'development'; an unrecognised type is left unresolved.
+    // Only the development branch is the development tier.
+    if ($env_type !== 'development') {
+      return NULL;
+    }
+
+    if (getenv('PLATFORM_BRANCH') === static::DEVELOPMENT_BRANCH) {
+      return Environment::DEVELOPMENT;
+    }
+
+    // Any other branch is an ephemeral per-branch build - a preview.
+    return Environment::PREVIEW;
   }
 
 }

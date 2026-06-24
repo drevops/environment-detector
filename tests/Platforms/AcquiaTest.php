@@ -69,9 +69,9 @@ final class AcquiaTest extends PlatformTestCase {
     ];
     yield [
       fn() => self::envSet('AH_SITE_ENVIRONMENT', 'something'),
-      NULL,
+      Environment::PREVIEW,
       function ($test): void {
-          $test->assertTrue(Environment::isDev());
+          $test->assertTrue(Environment::isPreview());
       },
     ];
   }

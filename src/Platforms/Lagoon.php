@@ -31,32 +31,44 @@ class Lagoon extends AbstractPlatform {
    * {@inheritdoc}
    */
   public function type(): ?string {
-    $type = NULL;
+    $env_type = getenv('LAGOON_ENVIRONMENT_TYPE');
 
-    if (getenv('LAGOON_ENVIRONMENT_TYPE') == 'production') {
-      $type = Environment::PRODUCTION;
-    }
-    elseif (getenv('LAGOON_ENVIRONMENT_TYPE') == 'development') {
-      $type = Environment::DEVELOPMENT;
-
-      // Try to identify production environment using a branch name for
-      // the cases when the Lagoon environment is not marked as 'production'
-      // yet. Note that `ENVIRONMENT_PRODUCTION_BRANCH` is a custom variable
-      // that should be set in the Lagoon project settings.
-      if (!empty(getenv('LAGOON_GIT_BRANCH')) && !empty(getenv('ENVIRONMENT_PRODUCTION_BRANCH')) && getenv('LAGOON_GIT_BRANCH') === getenv('ENVIRONMENT_PRODUCTION_BRANCH')) {
-        $type = Environment::PRODUCTION;
-      }
-      // `main` or `master` is a Stage if another branch is used for production.
-      elseif (getenv('LAGOON_GIT_BRANCH') == 'main' || getenv('LAGOON_GIT_BRANCH') == 'master') {
-        $type = Environment::STAGE;
-      }
-      // Release and hotfix branches are considered Stage.
-      elseif (!empty(getenv('LAGOON_GIT_BRANCH')) && (str_starts_with((string) getenv('LAGOON_GIT_BRANCH'), 'release/') || str_starts_with((string) getenv('LAGOON_GIT_BRANCH'), 'hotfix/'))) {
-        $type = Environment::STAGE;
-      }
+    if ($env_type === 'production') {
+      return Environment::PRODUCTION;
     }
 
-    return $type;
+    // Lagoon only types environments as 'production' or 'development'; an
+    // unrecognised type is left unresolved. A 'development' environment is
+    // narrowed to a tier by its deployed branch below.
+    if ($env_type !== 'development') {
+      return NULL;
+    }
+
+    $branch = (string) getenv('LAGOON_GIT_BRANCH');
+
+    // `ENVIRONMENT_PRODUCTION_BRANCH` is a custom project variable naming the
+    // branch deployed as production when Lagoon has not marked the environment
+    // as 'production' itself.
+    if ($branch !== '' && $branch === getenv('ENVIRONMENT_PRODUCTION_BRANCH')) {
+      return Environment::PRODUCTION;
+    }
+
+    // `main`/`master` is a stage when production runs on another branch.
+    if ($branch === 'main' || $branch === 'master') {
+      return Environment::STAGE;
+    }
+
+    // Release and hotfix branches are cut for pre-production sign-off.
+    if (str_starts_with($branch, 'release/') || str_starts_with($branch, 'hotfix/')) {
+      return Environment::STAGE;
+    }
+
+    if ($branch === static::DEVELOPMENT_BRANCH) {
+      return Environment::DEVELOPMENT;
+    }
+
+    // Any other branch is an ephemeral per-branch build - a preview.
+    return Environment::PREVIEW;
   }
 
   /**
