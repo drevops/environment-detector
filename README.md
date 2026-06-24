@@ -262,6 +262,23 @@ class CustomContext implements ContextInterface {
 Environment::init(contexts: [new CustomContext()]);
 ```
 
+## Environment variables
+
+Beyond the platform and stack detection signals the hosting or CI provider sets (listed in the [Platforms](#platforms) table), the detector reads a few variables that **you** set - to override detection or to shape the settings a context applies. All are optional.
+
+| Variable | Effect | Applies to | When unset |
+|----------|--------|------------|------------|
+| `ENVIRONMENT_TYPE` | If set before detection, the value is used verbatim and overrides all detection (handy for forcing a type while debugging); the resolved type is written back here either way. | Core | Detection runs and populates it. |
+| `CI` | When no platform is active, a truthy value resolves the type to `ci` instead of `local`. Most CI providers set it automatically. | Core | Treated as not-CI, so `local`. |
+| `ENVIRONMENT_PRODUCTION_BRANCH` | Names the Git branch deployed as production: a deployed branch equal to it resolves to `production`, and it also forms the Drupal `cache_prefix`. | Lagoon | Branches are typed by built-in conventions only. |
+| `DRUPAL_CONFIG_PATH` | Sets the Drupal `config_sync_directory`. | Acquia | Falls back to the Acquia-provided `config_vcs_directory`. |
+| `DRUPAL_TMP_PATH` | Sets the Drupal `file_temp_path` explicitly; takes precedence over the shared path below. | Acquia | `/tmp`, or the shared path when `DRUPAL_TMP_PATH_IS_SHARED` is set. |
+| `DRUPAL_TMP_PATH_IS_SHARED` | When truthy, points `file_temp_path` at the shared GFS mount (`/mnt/gfs/<group>.<env>/tmp`). | Acquia | `file_temp_path` stays `/tmp`. |
+| `DRUPAL_ACQUIA_SETTINGS_FILE` | Overrides the path to the Acquia-provided `*-settings.inc` file that is included. | Acquia | `/var/www/site-php/<group>/<group>-settings.inc`. |
+| `DRUPAL_ENVIRONMENT_CONTAINER_TRUSTED_HOSTS` | A comma-separated list of hostnames or URLs added as a Drupal `trusted_host_patterns` entry. | Container stack | No pattern is added. |
+
+The `DRUPAL_*` variables take effect only when the [Drupal](#contexts) context is active.
+
 ## Maintenance
 
 ```bash
