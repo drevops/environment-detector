@@ -38,10 +38,38 @@ final class AcquiaTest extends PlatformTestCase {
       },
     ];
     yield [
+      fn() => self::envSet('AH_SITE_ENVIRONMENT', 'stage'),
+      Environment::STAGE,
+      function ($test): void {
+          $test->assertTrue(Environment::isStage());
+      },
+    ];
+    yield [
       fn() => self::envSet('AH_SITE_ENVIRONMENT', 'prod'),
       Environment::PRODUCTION,
       function ($test): void {
           $test->assertTrue(Environment::isProd());
+      },
+    ];
+    yield [
+      fn() => self::envSet('AH_SITE_ENVIRONMENT', 'ode123'),
+      Environment::PREVIEW,
+      function ($test): void {
+          $test->assertTrue(Environment::isPreview());
+      },
+    ];
+    yield [
+      fn() => self::envSet('AH_SITE_ENVIRONMENT', 'ode'),
+      Environment::PREVIEW,
+      function ($test): void {
+          $test->assertTrue(Environment::isPreview());
+      },
+    ];
+    yield [
+      fn() => self::envSet('AH_SITE_ENVIRONMENT', 'something'),
+      NULL,
+      function ($test): void {
+          $test->assertTrue(Environment::isDev());
       },
     ];
   }

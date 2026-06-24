@@ -56,6 +56,21 @@ if (getenv('ENVIRONMENT_TYPE') === Environment::PRODUCTION) {
 
 If `ENVIRONMENT_TYPE` is already set, that value wins - handy for forcing a type while debugging.
 
+## Environment types
+
+The built-in detectors resolve to one of these types (a custom platform can return its own, read via `Environment::is('custom-type')`):
+
+| Type | What it is | Lifespan |
+|------|-----------|----------|
+| `local` | Your own machine or local stack (native host, DDEV, Lando, Docker); no hosting platform is active. | Persistent (developer-owned) |
+| `ci` | An automated CI runner (GitHub Actions, GitLab CI, CircleCI). | Ephemeral, per job |
+| `development` | A shared, long-lived hosting environment for ongoing integration work. Also the safe [fallback](#configuration). | Persistent |
+| `preview` | A short-lived, throwaway per-branch or per-PR environment with its own fully-built site on its own standalone URL. | Ephemeral |
+| `stage` | A persistent pre-production environment that mirrors production; used for UAT, QA, and release sign-off. | Persistent |
+| `production` | The live environment serving real users. | Persistent |
+
+`preview` is the only ephemeral, per-change tier with its own URL - which is what sets it apart from `development` (shared and long-lived) and `stage` (a persistent pre-production mirror).
+
 ## How it works
 
 A run is a set of nested rings, from the outermost ring inward to the application:
@@ -112,6 +127,21 @@ A platform is the outermost ring and the only one that decides the type. Built-i
 - [Platform.sh](src/Platforms/PlatformSh.php)
 - [Skpr](src/Platforms/Skpr.php)
 - [Tugboat](src/Platforms/Tugboat.php)
+
+### How platforms map to types
+
+Each hosting platform reads its own signal (usually an environment variable) and maps it to a type. When a hosting platform is active but its value is unrecognised, the [fallback](#configuration) (`development` by default) applies - except where the table notes otherwise.
+
+| Platform | Signal | `production` | `stage` | `development` | `preview` |
+|----------|--------|--------------|---------|---------------|-----------|
+| Acquia | `AH_SITE_ENVIRONMENT` | `prod` | `stage`, `test` | `dev` | `ode*` (on-demand) |
+| Lagoon | `LAGOON_KUBERNETES` | env-type `production`, or branch matching `ENVIRONMENT_PRODUCTION_BRANCH` | `main`/`master`, `release/*`, `hotfix/*` | env-type `development` | - |
+| Pantheon | `PANTHEON_ENVIRONMENT` | `live` | `test` | `dev` | any other value (multidev); no fallback |
+| Platform.sh | `PLATFORM_ENVIRONMENT_TYPE` | `production` | `staging` | `development` | - |
+| Skpr | `SKPR_ENV` | `prod` | `stg` | `dev` | - |
+| Tugboat | `TUGBOAT_PREVIEW_ID` | - | - | - | always |
+
+The CI platforms - CircleCI, GitHub Actions, GitLab CI - always resolve to `ci`.
 
 Read the active platform:
 
