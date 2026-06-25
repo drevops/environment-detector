@@ -105,6 +105,16 @@ final class ContainerTest extends StackTestCase {
         ],
       ],
     ];
+    // A port and path are stripped down to the host.
+    yield 'localdev url with port and path' => [
+      fn(): null => self::envSet('LOCALDEV_URL', 'https://example-site.docker.amazee.io:8080/subpath'),
+      [
+        'trusted_host_patterns' => [
+          '^(web|app|webserver|nginx|apache|apache2)$',
+          '^example-site\.docker\.amazee\.io$',
+        ],
+      ],
+    ];
   }
 
 }
