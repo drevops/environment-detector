@@ -616,10 +616,10 @@ class Environment {
     if (!static::$contexts) {
       static::$contexts = [];
 
-      // An explicitly-passed context replaces the built-in of the same ID: this
-      // is how a pre-built Drupal context, holding the site's settings and
-      // config by reference, supersedes the inert built-in. Two additional
-      // contexts sharing an ID remain a misconfiguration that throws below.
+      // An additional context overrides a built-in of the same ID instead of
+      // colliding with it - the explicit instance wins over the default. Two
+      // additional contexts sharing an ID is still a misconfiguration and
+      // throws below.
       $additional_ids = [];
       foreach ($additional as $context) {
         if ($context instanceof ContextInterface) {
