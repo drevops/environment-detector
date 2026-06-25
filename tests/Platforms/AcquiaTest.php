@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Tests\Platforms;
 
+use DrevOps\EnvironmentDetector\Contexts\Drupal;
 use DrevOps\EnvironmentDetector\Environment;
 use DrevOps\EnvironmentDetector\Platforms\Acquia;
 use DrevOps\EnvironmentDetector\Tests\Fixtures\NotDrupalContext;
@@ -77,32 +78,25 @@ final class AcquiaTest extends PlatformTestCase {
   }
 
   public function testContextualizeNonDrupalIsNoop(): void {
-    self::envSet('AH_SITE_ENVIRONMENT', 'prod');
-
-    global $settings;
-    global $config;
-    $settings = [];
-    $config = [];
-
-    // A non-Drupal context must not trigger any settings injection.
+    // A non-Drupal context hits the type guard and returns without touching it.
     (new Acquia())->contextualize(new NotDrupalContext());
 
-    $this->assertSame([], $settings);
-    $this->assertSame([], $config);
+    $this->expectNotToPerformAssertions();
   }
 
   #[DataProvider('dataProviderContextualizeDrupal')]
-  public function testContextualizeDrupal(callable $before, array $expected): void {
+  public function testContextualizeDrupal(callable $before, array $initial_settings, array $expected_settings, array $expected_config): void {
     $before();
 
     self::envSet('AH_SITE_ENVIRONMENT', 'dev');
-    Environment::init();
 
-    global $settings;
-    global $config;
+    $settings = $initial_settings;
+    $config = [];
+    $context = new Drupal($settings, $config);
+    (new Acquia())->contextualize($context);
 
-    $this->assertEquals($expected['settings'], $settings);
-    $this->assertEquals($expected['config'], $config);
+    $this->assertEquals($expected_settings, $settings);
+    $this->assertEquals($expected_config, $config);
   }
 
   public static function dataProviderContextualizeDrupal(): \Iterator {
@@ -110,101 +104,60 @@ final class AcquiaTest extends PlatformTestCase {
       'acquia_hosting_settings_autoconnect' => FALSE,
     ];
     // Minimal: no group, no config path, no temp overrides.
-    yield [
-      function (): void {
-        global $settings;
-        global $config;
-        $settings = ['hash_salt' => 'abc'];
-        $config = [];
-      },
+    yield 'minimal' => [
+      fn(): null => NULL,
+      [],
       [
-        'settings' => [
-          'hash_salt' => 'abc',
-          'environment' => Environment::DEVELOPMENT,
-          'auto_create_htaccess' => TRUE,
-          'file_temp_path' => '/tmp',
-        ],
-        'config' => $config,
+        'auto_create_htaccess' => TRUE,
+        'file_temp_path' => '/tmp',
       ],
+      $config,
     ];
     // Explicit config sync path.
-    yield [
-      function (): void {
-        global $settings;
-        global $config;
-        $settings = ['hash_salt' => 'abc'];
-        $config = [];
-        self::envSet('DRUPAL_CONFIG_PATH', '/app/config/sync');
-      },
+    yield 'explicit config path' => [
+      fn(): null => self::envSet('DRUPAL_CONFIG_PATH', '/app/config/sync'),
+      [],
       [
-        'settings' => [
-          'hash_salt' => 'abc',
-          'environment' => Environment::DEVELOPMENT,
-          'auto_create_htaccess' => TRUE,
-          'config_sync_directory' => '/app/config/sync',
-          'file_temp_path' => '/tmp',
-        ],
-        'config' => $config,
+        'auto_create_htaccess' => TRUE,
+        'config_sync_directory' => '/app/config/sync',
+        'file_temp_path' => '/tmp',
       ],
+      $config,
     ];
     // Acquia-provided VCS directory fallback.
-    yield [
-      function (): void {
-        global $settings;
-        global $config;
-        $settings = ['hash_salt' => 'abc', 'config_vcs_directory' => '/var/www/config'];
-        $config = [];
-      },
+    yield 'vcs directory fallback' => [
+      fn(): null => NULL,
+      ['config_vcs_directory' => '/var/www/config'],
       [
-        'settings' => [
-          'hash_salt' => 'abc',
-          'config_vcs_directory' => '/var/www/config',
-          'environment' => Environment::DEVELOPMENT,
-          'auto_create_htaccess' => TRUE,
-          'config_sync_directory' => '/var/www/config',
-          'file_temp_path' => '/tmp',
-        ],
-        'config' => $config,
+        'config_vcs_directory' => '/var/www/config',
+        'auto_create_htaccess' => TRUE,
+        'config_sync_directory' => '/var/www/config',
+        'file_temp_path' => '/tmp',
       ],
+      $config,
     ];
     // Explicit temp path override.
-    yield [
-      function (): void {
-        global $settings;
-        global $config;
-        $settings = ['hash_salt' => 'abc'];
-        $config = [];
-        self::envSet('DRUPAL_TMP_PATH', '/custom/tmp');
-      },
+    yield 'explicit temp path' => [
+      fn(): null => self::envSet('DRUPAL_TMP_PATH', '/custom/tmp'),
+      [],
       [
-        'settings' => [
-          'hash_salt' => 'abc',
-          'environment' => Environment::DEVELOPMENT,
-          'auto_create_htaccess' => TRUE,
-          'file_temp_path' => '/custom/tmp',
-        ],
-        'config' => $config,
+        'auto_create_htaccess' => TRUE,
+        'file_temp_path' => '/custom/tmp',
       ],
+      $config,
     ];
     // Shared temp path derived from the site group and environment.
-    yield [
+    yield 'shared temp path' => [
       function (): void {
-        global $settings;
-        global $config;
-        $settings = ['hash_salt' => 'abc'];
-        $config = [];
-        self::envSet('AH_SITE_GROUP', 'mygroup');
-        self::envSet('DRUPAL_TMP_PATH_IS_SHARED', '1');
+          self::envSet('AH_SITE_GROUP', 'mygroup');
+          self::envSet('DRUPAL_TMP_PATH_IS_SHARED', '1');
       },
+      [],
       [
-        'settings' => [
-          'hash_salt' => 'abc',
-          'environment' => Environment::DEVELOPMENT,
-          'auto_create_htaccess' => TRUE,
-          'file_temp_path' => '/mnt/gfs/mygroup.dev/tmp',
-        ],
-        'config' => $config,
+        'auto_create_htaccess' => TRUE,
+        'file_temp_path' => '/mnt/gfs/mygroup.dev/tmp',
       ],
+      $config,
     ];
   }
 

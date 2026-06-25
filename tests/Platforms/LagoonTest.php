@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Tests\Platforms;
 
+use DrevOps\EnvironmentDetector\Contexts\Drupal;
 use DrevOps\EnvironmentDetector\Environment;
 use DrevOps\EnvironmentDetector\Platforms\Lagoon;
 use DrevOps\EnvironmentDetector\Tests\Fixtures\NotDrupalContext;
@@ -107,156 +108,93 @@ final class LagoonTest extends PlatformTestCase {
   }
 
   public function testContextualizeNonDrupalIsNoop(): void {
-    self::envSet('LAGOON_KUBERNETES', 'myproject');
-    self::envSet('LAGOON_PROJECT', 'myproject');
-    self::envSet('LAGOON_GIT_SAFE_BRANCH', 'develop');
-
-    global $settings;
-    $settings = [];
-
-    // A non-Drupal context must not trigger any Drupal settings injection.
+    // A non-Drupal context hits the type guard and returns without touching it.
     (new Lagoon())->contextualize(new NotDrupalContext());
 
-    $this->assertSame([], $settings);
+    $this->expectNotToPerformAssertions();
   }
 
   #[DataProvider('dataProviderContextualizeDrupal')]
-  public function testContextualizeDrupal(callable $before, array $expected, ?callable $after = NULL): void {
+  public function testContextualizeDrupal(callable $before, array $expected): void {
     $before();
 
-    self::envSet('LAGOON_KUBERNETES', 'myproject');
-    // Resolve to the development tier so the context settings, not the type,
-    // are what these cases exercise.
-    self::envSet('LAGOON_ENVIRONMENT_TYPE', 'development');
-    self::envSet('LAGOON_GIT_BRANCH', 'develop');
-    Environment::init();
+    $settings = [];
+    $config = [];
+    $context = new Drupal($settings, $config);
+    (new Lagoon())->contextualize($context);
 
-    global $settings;
-    global $config;
-
-    $this->assertEquals($expected['settings'], $settings);
-    $this->assertEquals($expected['config'], $config);
-
-    if ($after !== NULL) {
-      $after($this);
-    }
+    $this->assertEquals($expected, $settings);
   }
 
-  public static function dataProviderContextualizeDrupal(): array {
-    $default_settings = [
-      'environment' => Environment::DEVELOPMENT,
-      'hash_salt' => 'abc',
-    ];
-    $default_config = [];
-
-    return [
+  public static function dataProviderContextualizeDrupal(): \Iterator {
+    // Defaults: reverse proxy plus the PHP-process host and the default-region
+    // amazee.io host.
+    yield 'defaults' => [
+      fn(): null => NULL,
       [
-        function () use ($default_settings, $default_config): void {
-          global $settings;
-          global $config;
-          $settings = $default_settings;
-          $config = $default_config;
-        },
-        [
-          'settings' => array_merge_recursive(
-            [
-              'reverse_proxy' => TRUE,
-              'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
-              'trusted_host_patterns' => [
-                '^nginx\-php$',
-                '^.+\.au\.amazee\.io$',
-              ],
-            ] + $default_settings),
-          'config' => array_merge_recursive([], $default_config),
+        'reverse_proxy' => TRUE,
+        'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
+        'trusted_host_patterns' => [
+          '^nginx\-php$',
+          '^.+\.au\.amazee\.io$',
         ],
       ],
-
-      [
-        function () use ($default_settings, $default_config): void {
-          global $settings;
-          global $config;
-          $settings = $default_settings;
-          $config = $default_config;
+    ];
+    // Routes and a project plus a safe branch add the cache prefix and the
+    // route hosts.
+    yield 'routes and cache prefix' => [
+      function (): void {
           self::envSet('LAGOON_ROUTES', 'http://example1.com,https://example2.com');
           self::envSet('LAGOON_PROJECT', 'myproject');
           self::envSet('LAGOON_GIT_SAFE_BRANCH', 'develop');
-        },
-        [
-          'settings' => array_merge_recursive([
-            'reverse_proxy' => TRUE,
-            'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
-            'cache_prefix' => 'myproject_develop',
-            'trusted_host_patterns' => [
-              '^nginx\-php$',
-              '^.+\.au\.amazee\.io$',
-              '^(example1\.com|example2\.com)$',
-            ],
-          ], $default_settings),
-          'config' => array_merge_recursive([], $default_config),
+      },
+      [
+        'reverse_proxy' => TRUE,
+        'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
+        'cache_prefix' => 'myproject_develop',
+        'trusted_host_patterns' => [
+          '^nginx\-php$',
+          '^.+\.au\.amazee\.io$',
+          '^(example1\.com|example2\.com)$',
         ],
       ],
-      [
-        function () use ($default_settings, $default_config): void {
-          global $settings;
-          global $config;
-          $settings = $default_settings;
-          $config = $default_config;
-          self::envSet('LAGOON_ROUTES', 'http://example1.com,https://example2/com');
+    ];
+    // The production branch forms the cache prefix when no safe branch is set.
+    yield 'cache prefix from production branch' => [
+      function (): void {
           self::envSet('LAGOON_PROJECT', 'myproject');
           self::envSet('ENVIRONMENT_PRODUCTION_BRANCH', 'master');
-        },
-        [
-          'settings' => array_merge_recursive([
-            'reverse_proxy' => TRUE,
-            'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
-            'cache_prefix' => 'myproject_master',
-            'trusted_host_patterns' => [
-              '^nginx\-php$',
-              '^.+\.au\.amazee\.io$',
-              '^(example1\.com|example2/com)$',
-            ],
-          ], $default_settings
-          ),
-          'config' => array_merge_recursive([], $default_config),
+      },
+      [
+        'reverse_proxy' => TRUE,
+        'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
+        'cache_prefix' => 'myproject_master',
+        'trusted_host_patterns' => [
+          '^nginx\-php$',
+          '^.+\.au\.amazee\.io$',
         ],
       ],
+    ];
+    // A non-default region is honoured.
+    yield 'custom region' => [
+      fn(): null => self::envSet('LAGOON_AMAZEEIO_REGION', 'us'),
       [
-        function () use ($default_settings, $default_config): void {
-          global $settings;
-          global $config;
-          $settings = $default_settings;
-          $config = $default_config;
-          self::envSet('LAGOON_AMAZEEIO_REGION', 'us');
-        },
-        [
-          'settings' => array_merge_recursive([
-            'reverse_proxy' => TRUE,
-            'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
-            'trusted_host_patterns' => [
-              '^nginx\-php$',
-              '^.+\.us\.amazee\.io$',
-            ],
-          ] + $default_settings),
-          'config' => array_merge_recursive([], $default_config),
+        'reverse_proxy' => TRUE,
+        'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
+        'trusted_host_patterns' => [
+          '^nginx\-php$',
+          '^.+\.us\.amazee\.io$',
         ],
       ],
+    ];
+    // An empty region skips the amazee.io pattern entirely.
+    yield 'empty region' => [
+      fn(): null => self::envSet('LAGOON_AMAZEEIO_REGION', ''),
       [
-        function () use ($default_settings, $default_config): void {
-          global $settings;
-          global $config;
-          $settings = $default_settings;
-          $config = $default_config;
-          self::envSet('LAGOON_AMAZEEIO_REGION', '');
-        },
-        [
-          'settings' => array_merge_recursive([
-            'reverse_proxy' => TRUE,
-            'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
-            'trusted_host_patterns' => [
-              '^nginx\-php$',
-            ],
-          ] + $default_settings),
-          'config' => array_merge_recursive([], $default_config),
+        'reverse_proxy' => TRUE,
+        'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
+        'trusted_host_patterns' => [
+          '^nginx\-php$',
         ],
       ],
     ];

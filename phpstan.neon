@@ -25,3 +25,11 @@ parameters:
       message: '#.*no value type specified in iterable type array.#'
       path: tests/*
       reportUnmatched: false
+    -
+      # The Drupal context carries the site's $settings/$config, which are
+      # heterogeneous bags by design. Typing their values as mixed would force
+      # noisy guards around every nested write, so they stay deliberately
+      # untyped here.
+      message: '#.*no value type specified in iterable type array.#'
+      path: src/Contexts/Drupal.php
+      reportUnmatched: false

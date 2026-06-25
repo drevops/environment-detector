@@ -616,13 +616,29 @@ class Environment {
     if (!static::$contexts) {
       static::$contexts = [];
 
+      // An explicitly-passed context replaces the built-in of the same ID: this
+      // is how a pre-built Drupal context, holding the site's settings and
+      // config by reference, supersedes the inert built-in. Two additional
+      // contexts sharing an ID remain a misconfiguration that throws below.
+      $additional_ids = [];
+      foreach ($additional as $context) {
+        if ($context instanceof ContextInterface) {
+          $additional_ids[$context->id()] = TRUE;
+        }
+      }
+
       $instances = array_merge(self::CONTEXTS, $additional);
 
       foreach ($instances as $instance) {
-        $instance = is_string($instance) ? new $instance() : $instance;
+        $is_builtin = is_string($instance);
+        $instance = $is_builtin ? new $instance() : $instance;
 
         if (!($instance instanceof ContextInterface)) {
           throw new \InvalidArgumentException('The context must implement ContextInterface');
+        }
+
+        if ($is_builtin && isset($additional_ids[$instance->id()])) {
+          continue;
         }
 
         static::addContext($instance);

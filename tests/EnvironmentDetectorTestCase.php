@@ -46,11 +46,6 @@ class EnvironmentDetectorTestCase extends TestCase {
     static::envUnsetPrefix('DOCKER');
     static::envUnsetPrefix('RUNNER_');
     static::envUnsetPrefix('CI');
-
-    global $settings;
-    $settings = [];
-    global $config;
-    $config = [];
   }
 
   /**

@@ -33,12 +33,15 @@ final class AbstractStackTest extends EnvironmentDetectorTestCase {
 
     };
 
-    global $settings;
     $settings = [];
+    $config = [];
+    $context = new Drupal($settings, $config);
 
-    $stack->contextualize(new Drupal());
+    $stack->contextualize($context);
 
+    // The abstract contextualize is a no-op and leaves the context untouched.
     $this->assertSame([], $settings);
+    $this->assertSame([], $config);
   }
 
 }

@@ -49,8 +49,8 @@ class Acquia extends AbstractPlatform {
       return;
     }
 
-    global $settings;
-    global $config;
+    $settings = &$context->settings;
+    $config = &$context->config;
 
     // Delay the initial database connection.
     $config['acquia_hosting_settings_autoconnect'] = FALSE;
@@ -76,7 +76,7 @@ class Acquia extends AbstractPlatform {
     if (is_string($config_path) && $config_path !== '') {
       $settings['config_sync_directory'] = $config_path;
     }
-    elseif (is_array($settings) && !empty($settings['config_vcs_directory'])) {
+    elseif (!empty($settings['config_vcs_directory'])) {
       $settings['config_sync_directory'] = $settings['config_vcs_directory'];
     }
 

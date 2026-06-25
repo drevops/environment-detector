@@ -20,6 +20,13 @@ class Container extends AbstractStack {
   public const ID = 'container';
 
   /**
+   * Conventional internal service hostnames used across Docker Compose stacks.
+   *
+   * @var string[]
+   */
+  public const SERVICE_HOSTS = ['web', 'app', 'webserver', 'nginx', 'apache', 'apache2'];
+
+  /**
    * {@inheritdoc}
    */
   public function active(): bool {
@@ -66,17 +73,16 @@ class Container extends AbstractStack {
       return;
     }
 
-    global $settings;
+    $settings = &$context->settings;
 
-    // Build a trusted host pattern from a comma-separated list of the
-    // container's hostnames or URLs (the site domain plus any internal
-    // service names). Mirrors the LAGOON_ROUTES handling.
-    $hosts = getenv('DRUPAL_ENVIRONMENT_CONTAINER_TRUSTED_HOSTS');
-    if (is_string($hosts) && $hosts !== '') {
-      $patterns = str_replace(['.', 'https://', 'http://', ','], [
-        '\.', '', '', '|',
-      ], $hosts);
-      $settings['trusted_host_patterns'][] = '^(' . $patterns . ')$';
+    // Internal service hostnames, reachable container-to-container.
+    $settings['trusted_host_patterns'][] = '^(' . implode('|', static::SERVICE_HOSTS) . ')$';
+
+    // The site's local development URL.
+    $url = getenv('LOCALDEV_URL');
+    if (is_string($url) && $url !== '') {
+      $host = preg_replace('#^https?://#', '', $url);
+      $settings['trusted_host_patterns'][] = '^' . str_replace('.', '\.', (string) $host) . '$';
     }
   }
 
