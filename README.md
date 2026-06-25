@@ -264,7 +264,8 @@ A context is the framework or application that detected settings are applied to.
 
 The built-in [Drupal](src/Contexts/Drupal.php) context is the turnkey example: it holds the site's `$settings` and `$config` by reference and is wired up by the one-line [Drupal integration](#drupal) shown above.
 
-Drupal is the only built-in context today, but the ring model is framework-agnostic. We are looking to add more framework integrations - contributions that add contexts for other frameworks (WordPress, Laravel, Symfony, and more) are welcome. Open an issue or a pull request.
+> [!NOTE]
+> Drupal is the only built-in context today, but the ring model is framework-agnostic. We are looking to add more framework integrations - contributions that add contexts for other frameworks (WordPress, Laravel, Symfony, and more) are welcome. Open an issue or a pull request.
 
 ### Custom contexts
 
