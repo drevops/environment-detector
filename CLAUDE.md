@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
+**Always use the Composer scripts below - never invoke the underlying binaries directly** (`vendor/bin/phpstan`, `vendor/bin/phpcs`, `vendor/bin/phpunit`, `vendor/bin/rector`, `vendor/bin/phpbench`, etc.). The scripts set the correct config, paths, and environment, so a raw invocation can silently diverge from CI.
+
 ### Linting and Code Quality
 - `composer lint` - Run all code quality checks (PHPCS, PHPStan, Rector dry-run)
 - `composer lint-fix` - Fix code quality issues (Rector + PHPCBF)
