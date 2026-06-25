@@ -187,7 +187,7 @@ class Environment {
   /**
    * Pre-defined context classes.
    *
-   * @var array<string>
+   * @var array<class-string<ContextInterface>>
    */
   protected const CONTEXTS = [
     Drupal::class,
@@ -323,8 +323,8 @@ class Environment {
    *   An array of additional platform classes to register.
    * @param array<int,\DrevOps\EnvironmentDetector\Stacks\StackInterface> $stacks
    *   An array of additional stack classes to register.
-   * @param array<int,\DrevOps\EnvironmentDetector\Contexts\ContextInterface> $contexts
-   *   An array of additional context classes to register.
+   * @param array<int,\DrevOps\EnvironmentDetector\Contexts\ContextInterface|class-string<\DrevOps\EnvironmentDetector\Contexts\ContextInterface>> $contexts
+   *   An array of additional contexts or class names to register.
    */
   public static function init(
     bool $contextualize = TRUE,
@@ -606,8 +606,8 @@ class Environment {
   /**
    * Get the list of registered contexts.
    *
-   * @param array<int, \DrevOps\EnvironmentDetector\Contexts\ContextInterface> $additional
-   *   An array of additional context classes to register.
+   * @param array<int, \DrevOps\EnvironmentDetector\Contexts\ContextInterface|class-string<\DrevOps\EnvironmentDetector\Contexts\ContextInterface>> $additional
+   *   An array of additional contexts or class names to register.
    *
    * @return \DrevOps\EnvironmentDetector\Contexts\ContextInterface[]
    *   An array of registered contexts.
@@ -616,32 +616,36 @@ class Environment {
     if (!static::$contexts) {
       static::$contexts = [];
 
-      // An additional context overrides a built-in of the same ID instead of
-      // colliding with it - the explicit instance wins over the default. Two
-      // additional contexts sharing an ID is still a misconfiguration and
-      // throws below.
-      $additional_ids = [];
-      foreach ($additional as $context) {
-        if ($context instanceof ContextInterface) {
-          $additional_ids[$context->id()] = TRUE;
-        }
-      }
-
-      $instances = array_merge(self::CONTEXTS, $additional);
-
-      foreach ($instances as $instance) {
-        $is_builtin = is_string($instance);
-        $instance = $is_builtin ? new $instance() : $instance;
+      // Resolve each additional context to an instance up front so its ID is
+      // known before the built-ins are registered. An additional context -
+      // passed as an instance or a class-string - overrides a built-in of the
+      // same ID instead of colliding with it; the explicit one wins.
+      $additional_instances = [];
+      $override_ids = [];
+      foreach ($additional as $instance) {
+        $instance = is_string($instance) ? new $instance() : $instance;
 
         if (!($instance instanceof ContextInterface)) {
           throw new \InvalidArgumentException('The context must implement ContextInterface');
         }
 
-        if ($is_builtin && isset($additional_ids[$instance->id()])) {
-          continue;
-        }
+        $additional_instances[] = $instance;
+        $override_ids[$instance->id()] = TRUE;
+      }
 
-        static::addContext($instance);
+      // Register the built-ins, skipping any an additional context overrides.
+      foreach (self::CONTEXTS as $class) {
+        $instance = new $class();
+
+        if (!isset($override_ids[$instance->id()])) {
+          static::addContext($instance);
+        }
+      }
+
+      // Two additional contexts sharing an ID remain a misconfiguration and
+      // throw here.
+      foreach ($additional_instances as $additional_instance) {
+        static::addContext($additional_instance);
       }
 
       static::$contexts ??= [];

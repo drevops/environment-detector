@@ -78,13 +78,18 @@ class Container extends AbstractStack {
     // Internal service hostnames, reachable container-to-container.
     $settings['trusted_host_patterns'][] = '^(' . implode('|', static::SERVICE_HOSTS) . ')$';
 
-    // The site's local development URL, reduced to its host: a port or path
-    // would never match Drupal's host-only trusted-host check.
+    // The site's local development URL, reduced to its host: a port, path, or
+    // credentials would never match Drupal's host-only trusted-host check.
     $url = getenv('LOCALDEV_URL');
     if (is_string($url) && $url !== '') {
-      $host = preg_replace('#^https?://#', '', $url);
-      $host = preg_replace('#[/:].*$#', '', (string) $host);
-      $settings['trusted_host_patterns'][] = '^' . str_replace('.', '\.', (string) $host) . '$';
+      $host = parse_url($url, PHP_URL_HOST);
+      if (!is_string($host) || $host === '') {
+        // A bare host with no scheme parses as a path, so retry with one.
+        $host = parse_url('http://' . ltrim($url, '/'), PHP_URL_HOST);
+      }
+      if (is_string($host) && $host !== '') {
+        $settings['trusted_host_patterns'][] = '^' . preg_quote($host, '#') . '$';
+      }
     }
   }
 

@@ -124,6 +124,8 @@ final class LagoonTest extends PlatformTestCase {
     (new Lagoon())->contextualize($context);
 
     $this->assertEquals($expected, $settings);
+    // Lagoon writes only settings, never config.
+    $this->assertSame([], $config);
   }
 
   public static function dataProviderContextualizeDrupal(): \Iterator {

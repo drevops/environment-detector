@@ -291,20 +291,20 @@ final class EnvironmentTest extends EnvironmentDetectorTestCase {
 
     $this->assertSame(Environment::PRODUCTION, getenv('ENVIRONMENT_TYPE'));
 
-    // Context layer: environment type plus the universal loopback set.
+    // The exact sequence pins the context -> platform -> stack ordering: the
+    // context's loopback set first, then the Container allowlist (Acquia adds
+    // no trusted host).
     $this->assertSame(Environment::PRODUCTION, $settings['environment']);
-    $patterns = $settings['trusted_host_patterns'];
-    $this->assertIsArray($patterns);
-    $this->assertContains('^localhost$', $patterns);
-    $this->assertContains('^127\.0\.0\.1$', $patterns);
+    $this->assertSame([
+      '^localhost$',
+      '^127\.0\.0\.1$',
+      '^(web|app|webserver|nginx|apache|apache2)$',
+    ], $settings['trusted_host_patterns']);
 
     // Platform layer (Acquia): its own keys land; it adds no reverse proxy.
     $this->assertTrue($settings['auto_create_htaccess']);
     $this->assertFalse($config['acquia_hosting_settings_autoconnect']);
     $this->assertArrayNotHasKey('reverse_proxy', $settings);
-
-    // Stack layer (Container): the service-host allowlist lands.
-    $this->assertContains('^(web|app|webserver|nginx|apache|apache2)$', $patterns);
   }
 
   public function testExplicitContextReplacesBuiltin(): void {
@@ -317,6 +317,14 @@ final class EnvironmentTest extends EnvironmentDetectorTestCase {
     // The explicitly-passed Drupal context supersedes the inert built-in of the
     // same ID rather than colliding with it.
     $this->assertSame($drupal, Environment::getActiveContext());
+  }
+
+  public function testClassStringContextDoesNotCollideWithBuiltin(): void {
+    // A context passed as a class-string whose ID matches a built-in overrides
+    // it rather than throwing a duplicate-ID exception.
+    Environment::init(contextualize: FALSE, contexts: [Drupal::class]);
+
+    $this->assertSame(Environment::LOCAL, getenv('ENVIRONMENT_TYPE'));
   }
 
   public function testGetActiveStackReturnsContainer(): void {

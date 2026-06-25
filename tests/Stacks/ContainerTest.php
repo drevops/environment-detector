@@ -73,6 +73,7 @@ final class ContainerTest extends StackTestCase {
     (new Container())->contextualize($context);
 
     $this->assertEquals($expected, $settings);
+    $this->assertSame([], $config);
   }
 
   public static function dataProviderContextualizeDrupal(): \Iterator {
@@ -91,7 +92,7 @@ final class ContainerTest extends StackTestCase {
       [
         'trusted_host_patterns' => [
           '^(web|app|webserver|nginx|apache|apache2)$',
-          '^example-site\.docker\.amazee\.io$',
+          '^example\-site\.docker\.amazee\.io$',
         ],
       ],
     ];
@@ -111,7 +112,7 @@ final class ContainerTest extends StackTestCase {
       [
         'trusted_host_patterns' => [
           '^(web|app|webserver|nginx|apache|apache2)$',
-          '^example-site\.docker\.amazee\.io$',
+          '^example\-site\.docker\.amazee\.io$',
         ],
       ],
     ];

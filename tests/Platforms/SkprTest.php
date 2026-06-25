@@ -74,15 +74,22 @@ final class SkprTest extends PlatformTestCase {
   public function testContextualizeDrupal(callable $before, array $expected, ?callable $after = NULL): void {
     $before();
 
-    $settings = [];
-    $config = [];
-    $context = new Drupal($settings, $config);
-    (new Skpr())->contextualize($context);
+    try {
+      $settings = [];
+      $config = [];
+      $context = new Drupal($settings, $config);
+      (new Skpr())->contextualize($context);
 
-    $this->assertEquals($expected, $settings);
-
-    if ($after !== NULL) {
-      $after($this);
+      $this->assertEquals($expected, $settings);
+      // Skpr writes only settings, never config.
+      $this->assertSame([], $config);
+    }
+    finally {
+      // Run cleanup even when an assertion fails, so a $_SERVER override set by
+      // $before cannot leak into later tests.
+      if ($after !== NULL) {
+        $after();
+      }
     }
   }
 
