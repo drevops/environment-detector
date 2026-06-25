@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace DrevOps\EnvironmentDetector\Tests;
 
 use DrevOps\EnvironmentDetector\Contexts\AbstractContext;
+use DrevOps\EnvironmentDetector\Contexts\Drupal;
 use DrevOps\EnvironmentDetector\Environment;
 use DrevOps\EnvironmentDetector\Platforms\AbstractPlatform;
 use DrevOps\EnvironmentDetector\Stacks\AbstractStack;
@@ -274,25 +275,56 @@ final class EnvironmentTest extends EnvironmentDetectorTestCase {
     $this->assertSame(Environment::STAGE, getenv('ENVIRONMENT_TYPE'));
   }
 
-  public function testNoopContextualizeWithRealPlatformAndStack(): void {
-    // An active platform and stack that both inherit the no-op contextualize()
-    // plus an active Drupal context exercise the abstract no-op path without
-    // injecting any platform/stack-specific settings.
+  public function testContextualizationLayersContextPlatformStack(): void {
+    // A real platform and stack with an active Drupal context layer their
+    // settings onto the by-reference $settings/$config: context first, then
+    // platform, then stack.
     self::envSet('AH_SITE_ENVIRONMENT', 'prod');
     self::envSet('DOCKER', 'TRUE');
 
-    global $settings;
+    /** @var array<string, mixed> $settings */
     $settings = ['hash_salt' => 'abc'];
+    /** @var array<string, mixed> $config */
+    $config = [];
 
-    Environment::init();
-
-    // Re-read the global after init() mutated it via the active context.
-    global $settings;
+    Environment::init(contexts: [new Drupal($settings, $config)]);
 
     $this->assertSame(Environment::PRODUCTION, getenv('ENVIRONMENT_TYPE'));
-    // Only the generic Drupal context change is applied.
+
+    // The exact sequence pins the context -> platform -> stack ordering: the
+    // context's loopback set first, then the Container allowlist (Acquia adds
+    // no trusted host).
     $this->assertSame(Environment::PRODUCTION, $settings['environment']);
+    $this->assertSame([
+      '^localhost$',
+      '^127\.0\.0\.1$',
+      '^(web|app|webserver|nginx|apache|apache2)$',
+    ], $settings['trusted_host_patterns']);
+
+    // Platform layer (Acquia): its own keys land; it adds no reverse proxy.
+    $this->assertTrue($settings['auto_create_htaccess']);
+    $this->assertFalse($config['acquia_hosting_settings_autoconnect']);
     $this->assertArrayNotHasKey('reverse_proxy', $settings);
+  }
+
+  public function testExplicitContextReplacesBuiltin(): void {
+    $settings = ['hash_salt' => 'abc'];
+    $config = [];
+    $drupal = new Drupal($settings, $config);
+
+    Environment::init(contextualize: FALSE, contexts: [$drupal]);
+
+    // The explicitly-passed Drupal context supersedes the inert built-in of the
+    // same ID rather than colliding with it.
+    $this->assertSame($drupal, Environment::getActiveContext());
+  }
+
+  public function testClassStringContextDoesNotCollideWithBuiltin(): void {
+    // A context passed as a class-string whose ID matches a built-in overrides
+    // it rather than throwing a duplicate-ID exception.
+    Environment::init(contextualize: FALSE, contexts: [Drupal::class]);
+
+    $this->assertSame(Environment::LOCAL, getenv('ENVIRONMENT_TYPE'));
   }
 
   public function testGetActiveStackReturnsContainer(): void {

@@ -41,12 +41,15 @@ final class AbstractPlatformTest extends EnvironmentDetectorTestCase {
 
     };
 
-    global $settings;
     $settings = [];
+    $config = [];
+    $context = new Drupal($settings, $config);
 
-    $platform->contextualize(new Drupal());
+    $platform->contextualize($context);
 
+    // The abstract contextualize is a no-op and leaves the context untouched.
     $this->assertSame([], $settings);
+    $this->assertSame([], $config);
   }
 
 }

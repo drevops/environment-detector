@@ -60,7 +60,7 @@ class Skpr extends AbstractPlatform {
       return;
     }
     // @codeCoverageIgnoreEnd
-    global $settings;
+    $settings = &$context->settings;
 
     $skpr = SkprConfig::create()->load();
 

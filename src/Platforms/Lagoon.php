@@ -79,7 +79,7 @@ class Lagoon extends AbstractPlatform {
       return;
     }
 
-    global $settings;
+    $settings = &$context->settings;
 
     // Lagoon reverse proxy settings.
     $settings['reverse_proxy'] = TRUE;

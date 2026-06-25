@@ -25,7 +25,7 @@ Answers one question, with no configuration: **what kind of environment is this 
 - Zero configuration: a single call detects and caches the type.
 - Recognises hosting platforms (Acquia, Lagoon, Pantheon, Platform.sh, Skpr, Tugboat) and CI platforms (GitHub Actions, GitLab CI, CircleCI).
 - Recognises the stack it runs on (native host, Container, DDEV, Lando).
-- Applies framework-specific settings through contexts (Drupal).
+- Turnkey Drupal integration: one line in `settings.php` detects the environment and owns all its settings.
 - Extensible with custom platforms, stacks, and contexts, with a safe fallback type.
 
 ## Installation
@@ -34,7 +34,30 @@ Answers one question, with no configuration: **what kind of environment is this 
 composer require drevops/environment-detector
 ```
 
-## Quick start
+## Usage
+
+The detector works in any PHP application, and ships a turnkey integration for Drupal.
+
+### Drupal
+
+A single line in `settings.php` detects the environment **and** applies every setting the detector owns - the resolved type, trusted hosts, reverse proxy, cache prefix, file paths, and more:
+
+```php
+require DRUPAL_ROOT . '/../vendor/drevops/environment-detector/environment.drupal.php';
+```
+
+That is the complete, recommended integration - nothing else is needed in `settings.php`. With it in place the detector:
+
+- resolves the environment type and writes it to `$settings['environment']`;
+- adds the universal loopback trusted hosts (`^localhost$`, `^127\.0\.0\.1$`);
+- applies the active platform's Drupal settings (e.g. Lagoon reverse proxy and routes, Acquia config and temp paths);
+- applies the active stack's Drupal settings (e.g. the container service-host allowlist and `LOCALDEV_URL`).
+
+The file is `require`d rather than autoloaded so it runs in the caller's scope: it hands the site's own `$settings` and `$config` to the detector by reference, and the detector writes the settings Drupal reads back. (A library writing the global `$settings` would update a different variable than the local one Drupal core consumes, so the settings would silently never land.) See [Contexts](#contexts) to extend or override what is applied.
+
+### Any PHP application
+
+Detect the environment type directly through the static facade:
 
 ```php
 use DrevOps\EnvironmentDetector\Environment;
@@ -237,7 +260,11 @@ Environment::init(stacks: [new CustomStack()]);
 
 ## Contexts
 
-A context is the framework or application that detected settings are applied to. The [Drupal](src/Contexts/Drupal.php) context, for example, writes to the global `$settings` array; the active platform and the active stack then layer their own changes on top (the Lagoon platform, say, adds its reverse-proxy and trusted-host settings).
+A context is the framework or application that detected settings are applied to. Once a context is active it applies its own generic settings first, then the active platform and the active stack layer their changes on top of the same target (the Lagoon platform, say, adds its reverse-proxy and trusted-host settings).
+
+The built-in [Drupal](src/Contexts/Drupal.php) context is the turnkey example: it holds the site's `$settings` and `$config` by reference and is wired up by the one-line [Drupal integration](#drupal) shown above.
+
+### Custom contexts
 
 Add your own by implementing `ContextInterface`:
 
@@ -275,7 +302,7 @@ Beyond the platform and stack detection signals the hosting or CI provider sets 
 | `DRUPAL_TMP_PATH` | Sets the Drupal `file_temp_path` explicitly; takes precedence over the shared path below. | Acquia | `/tmp`, or the shared path when `DRUPAL_TMP_PATH_IS_SHARED` is set. |
 | `DRUPAL_TMP_PATH_IS_SHARED` | When truthy, points `file_temp_path` at the shared GFS mount (`/mnt/gfs/<group>.<env>/tmp`). | Acquia | `file_temp_path` stays `/tmp`. |
 | `DRUPAL_ACQUIA_SETTINGS_FILE` | Overrides the path to the Acquia-provided `*-settings.inc` file that is included. | Acquia | `/var/www/site-php/<group>/<group>-settings.inc`. |
-| `DRUPAL_ENVIRONMENT_CONTAINER_TRUSTED_HOSTS` | A comma-separated list of hostnames or URLs added as a Drupal `trusted_host_patterns` entry. | Container stack | No pattern is added. |
+| `LOCALDEV_URL` | The site's local development URL, added as a Drupal `trusted_host_patterns` entry (the scheme is stripped). | Container stack | Only the built-in service-host allowlist (`web`, `app`, `webserver`, `nginx`, `apache`, `apache2`) is added. |
 
 The `DRUPAL_*` variables take effect only when the [Drupal](#contexts) context is active.
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Tests\Stacks;
 
+use DrevOps\EnvironmentDetector\Contexts\Drupal;
 use DrevOps\EnvironmentDetector\Environment;
 use DrevOps\EnvironmentDetector\Stacks\Container;
 use DrevOps\EnvironmentDetector\Tests\Fixtures\NotDrupalContext;
@@ -56,56 +57,64 @@ final class ContainerTest extends StackTestCase {
   }
 
   public function testContextualizeNonDrupalIsNoop(): void {
-    self::envSet('DOCKER', 'TRUE');
-    self::envSet('DRUPAL_ENVIRONMENT_CONTAINER_TRUSTED_HOSTS', 'https://example.local,webserver');
-
-    global $settings;
-    $settings = [];
-
-    // A non-Drupal context must not trigger any settings injection.
+    // A non-Drupal context hits the type guard and returns without touching it.
     (new Container())->contextualize(new NotDrupalContext());
 
-    $this->assertSame([], $settings);
+    $this->expectNotToPerformAssertions();
   }
 
   #[DataProvider('dataProviderContextualizeDrupal')]
   public function testContextualizeDrupal(callable $before, array $expected): void {
     $before();
 
-    self::envSet('DOCKER', 'TRUE');
-    Environment::init();
-
-    global $settings;
+    $settings = [];
+    $config = [];
+    $context = new Drupal($settings, $config);
+    (new Container())->contextualize($context);
 
     $this->assertEquals($expected, $settings);
+    $this->assertSame([], $config);
   }
 
   public static function dataProviderContextualizeDrupal(): \Iterator {
-    // No trusted host list - nothing added beyond the resolved environment.
-    yield [
-      function (): void {
-          global $settings;
-          $settings = ['hash_salt' => 'abc'];
-      },
-        [
-          'hash_salt' => 'abc',
-          'environment' => Environment::LOCAL,
+    // The built-in service-host allowlist is always added.
+    yield 'allowlist only' => [
+      fn(): null => NULL,
+      [
+        'trusted_host_patterns' => [
+          '^(web|app|webserver|nginx|apache|apache2)$',
         ],
+      ],
     ];
-    // A comma-separated URL/host list becomes one trusted-host regex.
-    yield [
-      function (): void {
-          global $settings;
-          $settings = ['hash_salt' => 'abc'];
-          self::envSet('DRUPAL_ENVIRONMENT_CONTAINER_TRUSTED_HOSTS', 'https://mysite.local,webserver');
-      },
-        [
-          'hash_salt' => 'abc',
-          'environment' => Environment::LOCAL,
-          'trusted_host_patterns' => [
-            '^(mysite\.local|webserver)$',
-          ],
+    // LOCALDEV_URL adds the site's dev host on top of the allowlist.
+    yield 'with localdev url' => [
+      fn(): null => self::envSet('LOCALDEV_URL', 'https://example-site.docker.amazee.io'),
+      [
+        'trusted_host_patterns' => [
+          '^(web|app|webserver|nginx|apache|apache2)$',
+          '^example\-site\.docker\.amazee\.io$',
         ],
+      ],
+    ];
+    // A bare host with no scheme is handled too.
+    yield 'bare host localdev url' => [
+      fn(): null => self::envSet('LOCALDEV_URL', 'mysite.local'),
+      [
+        'trusted_host_patterns' => [
+          '^(web|app|webserver|nginx|apache|apache2)$',
+          '^mysite\.local$',
+        ],
+      ],
+    ];
+    // A port and path are stripped down to the host.
+    yield 'localdev url with port and path' => [
+      fn(): null => self::envSet('LOCALDEV_URL', 'https://example-site.docker.amazee.io:8080/subpath'),
+      [
+        'trusted_host_patterns' => [
+          '^(web|app|webserver|nginx|apache|apache2)$',
+          '^example\-site\.docker\.amazee\.io$',
+        ],
+      ],
     ];
   }
 

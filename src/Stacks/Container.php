@@ -20,6 +20,13 @@ class Container extends AbstractStack {
   public const ID = 'container';
 
   /**
+   * Conventional internal service hostnames used across Docker Compose stacks.
+   *
+   * @var string[]
+   */
+  public const SERVICE_HOSTS = ['web', 'app', 'webserver', 'nginx', 'apache', 'apache2'];
+
+  /**
    * {@inheritdoc}
    */
   public function active(): bool {
@@ -66,17 +73,23 @@ class Container extends AbstractStack {
       return;
     }
 
-    global $settings;
+    $settings = &$context->settings;
 
-    // Build a trusted host pattern from a comma-separated list of the
-    // container's hostnames or URLs (the site domain plus any internal
-    // service names). Mirrors the LAGOON_ROUTES handling.
-    $hosts = getenv('DRUPAL_ENVIRONMENT_CONTAINER_TRUSTED_HOSTS');
-    if (is_string($hosts) && $hosts !== '') {
-      $patterns = str_replace(['.', 'https://', 'http://', ','], [
-        '\.', '', '', '|',
-      ], $hosts);
-      $settings['trusted_host_patterns'][] = '^(' . $patterns . ')$';
+    // Internal service hostnames, reachable container-to-container.
+    $settings['trusted_host_patterns'][] = '^(' . implode('|', static::SERVICE_HOSTS) . ')$';
+
+    // The site's local development URL, reduced to its host: a port, path, or
+    // credentials would never match Drupal's host-only trusted-host check.
+    $url = getenv('LOCALDEV_URL');
+    if (is_string($url) && $url !== '') {
+      $host = parse_url($url, PHP_URL_HOST);
+      if (!is_string($host) || $host === '') {
+        // A bare host with no scheme parses as a path, so retry with one.
+        $host = parse_url('http://' . ltrim($url, '/'), PHP_URL_HOST);
+      }
+      if (is_string($host) && $host !== '') {
+        $settings['trusted_host_patterns'][] = '^' . preg_quote($host, '#') . '$';
+      }
     }
   }
 

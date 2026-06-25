@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Tests\Platforms;
 
+use DrevOps\EnvironmentDetector\Contexts\Drupal;
 use DrevOps\EnvironmentDetector\Environment;
 use DrevOps\EnvironmentDetector\Platforms\Skpr;
 use DrevOps\EnvironmentDetector\Tests\Fixtures\NotDrupalContext;
@@ -63,104 +64,65 @@ final class SkprTest extends PlatformTestCase {
   }
 
   public function testContextualizeNonDrupalIsNoop(): void {
-    self::envSet('SKPR_ENV', 'dev');
-
-    global $settings;
-    $settings = [];
-
-    // A non-Drupal context must not trigger any Drupal settings injection.
+    // A non-Drupal context hits the type guard and returns without touching it.
     (new Skpr())->contextualize(new NotDrupalContext());
 
-    $this->assertSame([], $settings);
+    $this->expectNotToPerformAssertions();
   }
 
   #[DataProvider('dataProviderContextualizeDrupal')]
   public function testContextualizeDrupal(callable $before, array $expected, ?callable $after = NULL): void {
     $before();
 
-    self::envSet('SKPR_ENV', 'dev');
-    Environment::init();
+    try {
+      $settings = [];
+      $config = [];
+      $context = new Drupal($settings, $config);
+      (new Skpr())->contextualize($context);
 
-    global $settings;
-    global $config;
-
-    $this->assertEquals($expected['settings'], $settings);
-
-    if (isset($expected['config'])) {
-      $this->assertEquals($expected['config'], $config);
+      $this->assertEquals($expected, $settings);
+      // Skpr writes only settings, never config.
+      $this->assertSame([], $config);
     }
-
-    if ($after !== NULL) {
-      $after($this);
+    finally {
+      // Run cleanup even when an assertion fails, so a $_SERVER override set by
+      // $before cannot leak into later tests.
+      if ($after !== NULL) {
+        $after();
+      }
     }
   }
 
   public static function dataProviderContextualizeDrupal(): \Iterator {
-    $default_settings = [
-      'environment' => Environment::DEVELOPMENT,
-      'hash_salt' => 'abc',
-    ];
-    $default_config = [];
-    yield [
-      function () use ($default_settings, $default_config): void {
-        global $settings;
-        global $config;
-        $settings = $default_settings;
-        $config = $default_config;
-      },
-      [
-        'settings' => array_merge_recursive(
-          [
-            'file_public_path' => 'sites/default/files',
-            'file_temp_path' => '/tmp',
-            'file_private_path' => 'sites/default/files/private',
-            'php_storage' => [
-              'twig' => [
-                'directory' => '/app/web/../.php',
-              ],
-            ],
-            'trusted_host_patterns' => [
-              '^127\.0\.0\.1$',
-            ],
-          ],
-          $default_settings
-        ),
-        'config' => array_merge_recursive([], $default_config),
+    $base = [
+      'file_public_path' => 'sites/default/files',
+      'file_temp_path' => '/tmp',
+      'file_private_path' => 'sites/default/files/private',
+      'php_storage' => [
+        'twig' => [
+          'directory' => '/app/web/../.php',
+        ],
+      ],
+      'trusted_host_patterns' => [
+        '^127\.0\.0\.1$',
       ],
     ];
-    yield [
-      function () use ($default_settings, $default_config): void {
-        global $settings;
-        global $config;
-        $settings = $default_settings;
-        $config = $default_config;
-        $_SERVER['HTTP_X_FORWARDED_FOR'] = '192.168.1.1';
-      },
-      [
-        'settings' => array_merge_recursive(
-          [
-            'file_public_path' => 'sites/default/files',
-            'file_temp_path' => '/tmp',
-            'file_private_path' => 'sites/default/files/private',
-            'php_storage' => [
-              'twig' => [
-                'directory' => '/app/web/../.php',
-              ],
-            ],
-            'trusted_host_patterns' => [
-              '^127\.0\.0\.1$',
-            ],
-            'reverse_proxy' => TRUE,
-            'reverse_proxy_proto_header' => 'HTTP_CLOUDFRONT_FORWARDED_PROTO',
-            'reverse_proxy_port_header' => 'SERVER_PORT',
-            'reverse_proxy_addresses' => [],
-          ],
-          $default_settings
-        ),
-        'config' => array_merge_recursive([], $default_config),
+    // Default file paths and the loopback trusted host.
+    yield 'defaults' => [
+      fn(): null => NULL,
+      $base,
+    ];
+    // A forwarded-for header turns on the reverse-proxy settings.
+    yield 'reverse proxy' => [
+      fn(): string => $_SERVER['HTTP_X_FORWARDED_FOR'] = '192.168.1.1',
+      $base + [
+        'reverse_proxy' => TRUE,
+        'reverse_proxy_proto_header' => 'HTTP_CLOUDFRONT_FORWARDED_PROTO',
+        'reverse_proxy_port_header' => 'SERVER_PORT',
+        'reverse_proxy_addresses' => [],
       ],
       function (): void {
-        unset($_SERVER['HTTP_X_FORWARDED_FOR']);
+          unset($_SERVER['HTTP_X_FORWARDED_FOR']);
       },
     ];
   }
