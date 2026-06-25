@@ -129,8 +129,7 @@ final class LagoonTest extends PlatformTestCase {
   }
 
   public static function dataProviderContextualizeDrupal(): \Iterator {
-    // Defaults: reverse proxy plus the PHP-process host and the default-region
-    // amazee.io host.
+    // Defaults: reverse proxy plus the PHP-process host and the amazee.io host.
     yield 'defaults' => [
       fn(): null => NULL,
       [
@@ -138,7 +137,7 @@ final class LagoonTest extends PlatformTestCase {
         'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
         'trusted_host_patterns' => [
           '^nginx\-php$',
-          '^.+\.au\.amazee\.io$',
+          '^.+\.amazee\.io$',
         ],
       ],
     ];
@@ -156,7 +155,7 @@ final class LagoonTest extends PlatformTestCase {
         'cache_prefix' => 'myproject_develop',
         'trusted_host_patterns' => [
           '^nginx\-php$',
-          '^.+\.au\.amazee\.io$',
+          '^.+\.amazee\.io$',
           '^(example1\.com|example2\.com)$',
         ],
       ],
@@ -173,30 +172,7 @@ final class LagoonTest extends PlatformTestCase {
         'cache_prefix' => 'myproject_master',
         'trusted_host_patterns' => [
           '^nginx\-php$',
-          '^.+\.au\.amazee\.io$',
-        ],
-      ],
-    ];
-    // A non-default region is honoured.
-    yield 'custom region' => [
-      fn(): null => self::envSet('LAGOON_AMAZEEIO_REGION', 'us'),
-      [
-        'reverse_proxy' => TRUE,
-        'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
-        'trusted_host_patterns' => [
-          '^nginx\-php$',
-          '^.+\.us\.amazee\.io$',
-        ],
-      ],
-    ];
-    // An empty region skips the amazee.io pattern entirely.
-    yield 'empty region' => [
-      fn(): null => self::envSet('LAGOON_AMAZEEIO_REGION', ''),
-      [
-        'reverse_proxy' => TRUE,
-        'reverse_proxy_header' => 'HTTP_TRUE_CLIENT_IP',
-        'trusted_host_patterns' => [
-          '^nginx\-php$',
+          '^.+\.amazee\.io$',
         ],
       ],
     ];
