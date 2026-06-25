@@ -111,8 +111,8 @@ A run is a set of nested rings, from the outermost ring inward to the applicatio
 ```
 
 - **Platform** - the outermost ring, and the *only* one that decides the type. A hosting platform maps to `production`/`stage`/`development`/`preview`; a CI platform maps to `ci`; with no platform at all the type is `local` (or `ci` when a generic `CI` signal is present).
-- **Stack** - the substrate the run sits in (`native`, `container`, `ddev`, `lando`). A stack nests inside a platform, never decides the type, and only contributes settings. `ddev` and `lando` are specific containers, `container` is the generic container fallback, and `native` is the native host (bare metal), the fallback when nothing else matches.
-- **Context** - the application/framework (e.g. Drupal) that detected settings are applied to.
+- **Stack** - the substrate the run sits in (`native`, `container`, `ddev`, `lando`). A stack nests inside a platform, never decides the type, and can only update the context. `ddev` and `lando` are specific containers, `container` is the generic container fallback, and `native` is the native host (bare metal), the fallback when nothing else matches.
+- **Context** - the application/framework (e.g. Drupal, WordPress, Laravel) that detected settings are applied to.
 - **Runtime** (PHP) is shown only to complete the picture; it is not detected.
 
 Two rules follow:
@@ -120,7 +120,7 @@ Two rules follow:
 1. **At most one platform is active.** Two active platforms (say Acquia *and* Lagoon) is a genuine misconfiguration and throws.
 2. **Exactly one stack is always active - the most specific stack that matches, or the native host as the fallback.** A container inside Acquia or inside CI is just an inner ring; it never collides with the platform. The most specific match wins - DDEV over the generic `container`, say - and the native host is the last-resort fallback when nothing else matches.
 
-When a context is active, it applies its generic settings first, then the active platform and the active stack apply their own on top. This happens even when the type was pre-set via `ENVIRONMENT_TYPE`.
+When a context is active, it applies its own generic changes first, then the active platform and the active stack apply their own on top. This happens even when the type was pre-set via `ENVIRONMENT_TYPE`.
 
 ## Configuration
 
@@ -260,9 +260,11 @@ Environment::init(stacks: [new CustomStack()]);
 
 ## Contexts
 
-A context is the framework or application that detected settings are applied to. Once a context is active it applies its own generic settings first, then the active platform and the active stack layer their changes on top of the same target (the Lagoon platform, say, adds its reverse-proxy and trusted-host settings).
+A context is the framework or application that detected settings are applied to. Once a context is active it applies its own generic changes first, then the active platform and the active stack layer their changes on top of the same target (the Lagoon platform, say, adds its reverse-proxy and trusted-host settings).
 
 The built-in [Drupal](src/Contexts/Drupal.php) context is the turnkey example: it holds the site's `$settings` and `$config` by reference and is wired up by the one-line [Drupal integration](#drupal) shown above.
+
+Drupal is the only built-in context today, but the ring model is framework-agnostic. We are looking to add more framework integrations - contributions that add contexts for other frameworks (WordPress, Laravel, Symfony, and more) are welcome. Open an issue or a pull request.
 
 ### Custom contexts
 
