@@ -27,9 +27,9 @@ interface ContextInterface {
   /**
    * Check if the context is active.
    *
-   * Any required data _could_ be passed in as an argument, but better to use
-   * the other means based on the implementation: environment variables,
-   * configuration files, global variables, etc.
+   * The method takes no arguments; an implementation reads whatever it needs
+   * from the state it holds (for example values injected at construction),
+   * environment variables, or configuration files.
    *
    * @return bool
    *   TRUE if the context is active, FALSE otherwise.
@@ -39,9 +39,10 @@ interface ContextInterface {
   /**
    * Apply the context.
    *
-   * Any data that needs to be modified _could_ be passed in as an argument,
-   * but better to use the other means based on the implementation: environment
-   * variables, configuration files, global variables, etc.
+   * The method takes no arguments; an implementation applies changes to the
+   * state it holds (for example framework settings injected by reference at
+   * construction, so the changes land in the arrays the framework reads back),
+   * environment variables, or configuration files.
    */
   public function contextualize(): void;
 
