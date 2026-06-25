@@ -268,12 +268,20 @@ Drupal is the only built-in context today, but the ring model is framework-agnos
 
 ### Custom contexts
 
-Add your own by implementing `ContextInterface`:
+Add your own by implementing `ContextInterface`. Bind the framework's own state by reference in the constructor, then write to it in `contextualize()` - the same by-reference approach the built-in Drupal context uses:
 
 ```php
 use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 
 class CustomContext implements ContextInterface {
+  // Hold the framework's own config by reference so the changes land in the
+  // array the framework reads back, not a separate copy.
+  public array $config;
+
+  public function __construct(array &$config = []) {
+    $this->config = &$config;
+  }
+
   public function id(): string {
     return 'myframework';
   }
@@ -283,12 +291,12 @@ class CustomContext implements ContextInterface {
   }
 
   public function contextualize(): void {
-    global $configuration;
-    $configuration['custom_value'] = $_SERVER['custom_value'] ?? 'default';
+    $this->config['custom_value'] = $_SERVER['custom_value'] ?? 'default';
   }
 }
 
-Environment::init(contexts: [new CustomContext()]);
+// $config is the framework's own configuration array, in scope here.
+Environment::init(contexts: [new CustomContext($config)]);
 ```
 
 ## Environment variables
