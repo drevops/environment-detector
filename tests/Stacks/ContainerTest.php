@@ -19,8 +19,8 @@ final class ContainerTest extends StackTestCase {
     yield [fn(): null => NULL, FALSE];
     yield [fn(): null => self::envSet('DOCKER', 'TRUE'), TRUE];
     yield [fn(): null => self::envSet('container', 'TRUE'), TRUE];
-    // A specific container marker alone, with no actual container signal, does
-    // not make the generic container active.
+    // A specific container's marker activates that stack (DDEV, Lando), not
+    // the generic container.
     yield [fn(): null => self::envSet('IS_DDEV_PROJECT', 'TRUE'), FALSE];
     yield [fn(): null => self::envSet('LANDO_INFO', 'TRUE'), FALSE];
     // A more specific container takes precedence over the generic one.

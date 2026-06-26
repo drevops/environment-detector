@@ -14,8 +14,11 @@ final class DdevTest extends StackTestCase {
 
   public static function dataProviderActive(): \Iterator|array {
     yield [fn(): null => NULL, FALSE];
-    // The DDEV marker alone is not enough: DDEV must be a container first.
-    yield [fn(): null => self::envSet('IS_DDEV_PROJECT', 'TRUE'), FALSE];
+    // The DDEV marker is definitive: DDEV always runs in a container, so the
+    // marker alone makes it the active stack with no separate container probe.
+    yield [fn(): null => self::envSet('IS_DDEV_PROJECT', 'TRUE'), TRUE];
+    // An incidental container signal alongside the marker still resolves to
+    // DDEV, ahead of the generic container.
     yield [
       function (): void {
           self::envSet('DOCKER', 'TRUE');
