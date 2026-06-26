@@ -105,10 +105,9 @@ Detection is modelled as nested rings. A run wraps from an outer ring down to th
 #### Baseline Management
 
 - Baselines stored in `.phpbench/storage/` directory (tracked in git)
-- The committed baseline is generated on the CI runner, so the gate compares like-for-like rather than across machines
-- CI automatically compares each pull request against the baseline with a ±15% threshold, set above the run-to-run noise floor of these microsecond-scale subjects (a tighter gate produced false failures, including on docs-only changes)
-- Refresh the baseline by running the "Benchmark PHP" workflow manually (`workflow_dispatch`) on the target branch; the job regenerates it on the runner, removes the previous one, and commits the single replacement back (no merge to the default branch needed first)
-- Performance regressions exceeding the ±15% threshold will fail CI builds
+- The benchmark is report-only: it runs on every pull request and posts its comparison against the committed baseline, but never fails CI. Each CI run lands on a different shared runner whose speed varies ~15-25% between jobs, so a committed-baseline hard gate cannot be made reliable (a reliable gate would require measuring baseline and candidate in the same job on the same runner)
+- The committed baseline is the comparison reference, generated on a CI runner; refresh it by running the "Benchmark PHP" workflow manually (`workflow_dispatch`) on the target branch, which regenerates it on the runner, removes the previous one, and commits the single replacement back
+- Results are also posted as a running trend on the "Performance benchmarks" issue on each push to main
 
 ## File Structure
 
