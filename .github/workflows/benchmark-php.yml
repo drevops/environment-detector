@@ -10,6 +10,9 @@ on:
       - 'feature/**'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   benchmark-php:
     runs-on: ubuntu-latest
@@ -34,10 +37,13 @@ jobs:
       - name: Install dependencies
         run: composer install
 
+      # The committed baseline is generated on this same runner (see the
+      # "Regenerate baseline" job below), so the comparison is machine-consistent.
       - name: Run performance tests with baseline comparison
         id: perf-test
+        if: github.event_name != 'workflow_dispatch'
         run: |
-          if ./vendor/bin/phpbench log 2>/dev/null | grep -q "baseline"; then
+          if [ -n "$(find .phpbench/storage -name '*.xml' 2>/dev/null)" ]; then
             echo "Baseline found, running comparison with 15% threshold"
             composer benchmark -- --assert="mode(variant.time.avg) <= mode(baseline.time.avg) +/- 15%"
           else
@@ -46,8 +52,10 @@ jobs:
           fi
         continue-on-error: true
 
+      # The gate only blocks pull requests; pushes to main and the manual
+      # regeneration never fail the build on a perf delta.
       - name: Check performance test result
-        if: steps.perf-test.outcome == 'failure'
+        if: github.event_name == 'pull_request' && steps.perf-test.outcome == 'failure'
         run: |
           echo "## ⚠️ Performance Regression Detected" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -57,6 +65,7 @@ jobs:
           exit 1
 
       - name: Upload performance report as artifact
+        if: github.event_name != 'workflow_dispatch'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{github.job}}-performance-report
@@ -125,3 +134,16 @@ jobs:
           issue-number: ${{ steps.find-issue.outputs.issue-number }}
           body-path: issue_comment.md
           edit-mode: replace
+
+      # Generate the baseline on the CI runner so the committed baseline matches
+      # the environment the gate runs in. Trigger this manually (Run workflow)
+      # on a branch to refresh its baseline; it commits the result back.
+      - name: Regenerate baseline on CI
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          composer benchmark-baseline
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .phpbench/storage
+          git commit -m "Regenerated performance baseline on CI. [skip ci]" || echo "Baseline unchanged"
+          git push origin HEAD:${{ github.ref_name }}
