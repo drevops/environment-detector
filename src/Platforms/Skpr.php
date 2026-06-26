@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Platforms;
 
-use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 use DrevOps\EnvironmentDetector\Contexts\Drupal;
+use DrevOps\EnvironmentDetector\Contexts\DrupalContextualizerInterface;
 use DrevOps\EnvironmentDetector\Environment;
 use Skpr\SkprConfig;
 
@@ -14,7 +14,7 @@ use Skpr\SkprConfig;
  *
  * @package DrevOps\EnvironmentDetector\Platforms
  */
-class Skpr extends AbstractPlatform {
+class Skpr extends AbstractPlatform implements DrupalContextualizerInterface {
 
   /**
    * {@inheritdoc}
@@ -47,11 +47,7 @@ class Skpr extends AbstractPlatform {
    *
    * @see https://docs.skpr.io/integrations/drupal
    */
-  public function contextualize(ContextInterface $context): void {
-    if (!$context instanceof Drupal) {
-      return;
-    }
-
+  public function contextualizeDrupal(Drupal $context): void {
     // Outside a real Skpr+Drupal runtime there is nothing to configure. This
     // guard depends on runtime presence of SkprConfig and DRUPAL_ROOT, so it is
     // not exercisable from tests.

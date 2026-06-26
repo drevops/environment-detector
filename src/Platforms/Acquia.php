@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Platforms;
 
-use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 use DrevOps\EnvironmentDetector\Contexts\Drupal;
+use DrevOps\EnvironmentDetector\Contexts\DrupalContextualizerInterface;
 use DrevOps\EnvironmentDetector\Environment;
 
 /**
@@ -13,7 +13,7 @@ use DrevOps\EnvironmentDetector\Environment;
  *
  * @package DrevOps\EnvironmentDetector\Platforms
  */
-class Acquia extends AbstractPlatform {
+class Acquia extends AbstractPlatform implements DrupalContextualizerInterface {
 
   /**
    * {@inheritdoc}
@@ -44,11 +44,7 @@ class Acquia extends AbstractPlatform {
   /**
    * {@inheritdoc}
    */
-  public function contextualize(ContextInterface $context): void {
-    if (!$context instanceof Drupal) {
-      return;
-    }
-
+  public function contextualizeDrupal(Drupal $context): void {
     $settings = &$context->settings;
     $config = &$context->config;
 

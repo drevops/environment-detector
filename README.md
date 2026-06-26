@@ -181,17 +181,16 @@ if (Environment::getActivePlatform()?->id() === 'acquia') {
 }
 ```
 
-Add your own by implementing `PlatformInterface`:
+Add your own by extending `AbstractPlatform`. Implement a context's capability interface (`DrupalContextualizerInterface` for Drupal) to apply settings through a typed method the detector resolves for you; override `contextualize()` to handle a context defined at runtime instead:
 
 ```php
-use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
+use DrevOps\EnvironmentDetector\Contexts\Drupal;
+use DrevOps\EnvironmentDetector\Contexts\DrupalContextualizerInterface;
 use DrevOps\EnvironmentDetector\Environment;
-use DrevOps\EnvironmentDetector\Platforms\PlatformInterface;
+use DrevOps\EnvironmentDetector\Platforms\AbstractPlatform;
 
-class CustomHosting implements PlatformInterface {
-  public function id(): string {
-    return 'customhosting';
-  }
+class CustomHosting extends AbstractPlatform implements DrupalContextualizerInterface {
+  public const ID = 'customhosting';
 
   public function active(): bool {
     return isset($_SERVER['CUSTOM_ENV']);
@@ -206,8 +205,10 @@ class CustomHosting implements PlatformInterface {
     };
   }
 
-  public function contextualize(ContextInterface $context): void {
-    // Optional: apply platform-specific context changes.
+  // Resolved automatically for the Drupal context. To handle a context defined
+  // at runtime, override contextualize(ContextInterface $context) instead.
+  public function contextualizeDrupal(Drupal $context): void {
+    $context->settings['some_setting'] = 'value';
   }
 }
 
@@ -235,23 +236,24 @@ if (Environment::getActiveStack()?->id() === 'ddev') {
 
 `getActiveStack()` returns the first registered stack whose `active()` matches - your custom stacks included - with the `native` host as the last-resort fallback.
 
-Add your own by implementing `StackInterface`:
+Add your own by extending `AbstractStack`. As with platforms, implement a context's capability interface for the typed path, or override `contextualize()` for a runtime context:
 
 ```php
-use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
-use DrevOps\EnvironmentDetector\Stacks\StackInterface;
+use DrevOps\EnvironmentDetector\Contexts\Drupal;
+use DrevOps\EnvironmentDetector\Contexts\DrupalContextualizerInterface;
+use DrevOps\EnvironmentDetector\Stacks\AbstractStack;
 
-class CustomStack implements StackInterface {
-  public function id(): string {
-    return 'customstack';
-  }
+class CustomStack extends AbstractStack implements DrupalContextualizerInterface {
+  public const ID = 'customstack';
 
   public function active(): bool {
     return getenv('CUSTOM_STACK') !== false;
   }
 
-  public function contextualize(ContextInterface $context): void {
-    // Optional: apply stack-specific context changes.
+  // Resolved automatically for the Drupal context. To handle a context defined
+  // at runtime, override contextualize(ContextInterface $context) instead.
+  public function contextualizeDrupal(Drupal $context): void {
+    $context->settings['some_setting'] = 'value';
   }
 }
 
@@ -261,6 +263,8 @@ Environment::init(stacks: [new CustomStack()]);
 ## Contexts
 
 A context is the framework or application that detected settings are applied to. Once a context is active it applies its own generic changes first, then the active platform and the active stack layer their changes on top of the same target (the Lagoon platform, say, adds its reverse-proxy and trusted-host settings).
+
+A platform or stack applies settings to a context in one of two ways. For a context the library ships, it implements that context's capability interface - [`DrupalContextualizerInterface`](src/Contexts/DrupalContextualizerInterface.php) for Drupal - and the detector resolves the typed `contextualizeDrupal()` method automatically. For a context defined at runtime, it overrides `contextualize(ContextInterface $context)` and handles the context itself. The built-in platforms and stacks use the typed path.
 
 The built-in [Drupal](src/Contexts/Drupal.php) context is the turnkey example: it holds the site's `$settings` and `$config` by reference and is wired up by the one-line [Drupal integration](#drupal) shown above.
 
