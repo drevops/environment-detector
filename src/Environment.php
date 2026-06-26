@@ -367,6 +367,11 @@ class Environment {
     static::$contexts = NULL;
     static::$isInitialized = FALSE;
 
+    // The container probe caches its result for the run; clearing it lets the
+    // next detection re-probe, which a test simulating a different host relies
+    // on.
+    Container::resetCache();
+
     if ($all) {
       static::$fallback = self::DEVELOPMENT;
     }
