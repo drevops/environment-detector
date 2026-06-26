@@ -11,8 +11,9 @@ use PhpBench\Attributes as Bench;
 /**
  * Benchmarks the real cold detection and contextualization paths.
  *
- * Every subject resets the detector at the start of each revolution, so the
- * full once-per-request cost - discovery, type resolution and settings
+ * Each subject neutralizes the ambient environment and sets up its scenario
+ * once per iteration, then resets the detector at the start of each revolution
+ * so the full once-per-request cost - discovery, type resolution and settings
  * application - is measured rather than the early return a warm init() takes.
  *
  * @package DrevOps\EnvironmentDetector\Benchmarks
@@ -20,16 +21,25 @@ use PhpBench\Attributes as Bench;
 class DetectionBenchmark extends AbstractBenchmark {
 
   /**
-   * Mark the run as containerised for the container-stack subjects.
+   * Neutral environment: no platform, no container.
+   */
+  public function setUpLocal(): void {
+    $this->neutralizeEnvironment();
+  }
+
+  /**
+   * Containerised environment.
    */
   public function setUpContainer(): void {
+    $this->neutralizeEnvironment();
     putenv('DOCKER=TRUE');
   }
 
   /**
-   * Activate the Lagoon platform with a resolvable production tier.
+   * Active Lagoon platform resolving a production tier.
    */
   public function setUpLagoon(): void {
+    $this->neutralizeEnvironment();
     putenv('LAGOON_KUBERNETES=remote');
     putenv('LAGOON_ENVIRONMENT_TYPE=production');
     putenv('LAGOON_PROJECT=example');
@@ -38,11 +48,11 @@ class DetectionBenchmark extends AbstractBenchmark {
   }
 
   /**
-   * Activate the Lagoon platform inside a container.
+   * Active Lagoon platform inside a container.
    */
   public function setUpLagoonContainer(): void {
-    $this->setUpContainer();
     $this->setUpLagoon();
+    putenv('DOCKER=TRUE');
   }
 
   /**
@@ -52,6 +62,7 @@ class DetectionBenchmark extends AbstractBenchmark {
   #[Bench\Iterations(20)]
   #[Bench\Warmup(2)]
   #[Bench\RetryThreshold(5)]
+  #[Bench\BeforeMethods(['setUpLocal'])]
   public function benchDetectLocal(): void {
     $this->resetDetector();
 
@@ -65,6 +76,7 @@ class DetectionBenchmark extends AbstractBenchmark {
   #[Bench\Iterations(20)]
   #[Bench\Warmup(2)]
   #[Bench\RetryThreshold(5)]
+  #[Bench\BeforeMethods(['setUpLocal'])]
   public function benchDetectDrupalNative(): void {
     $this->resetDetector();
 

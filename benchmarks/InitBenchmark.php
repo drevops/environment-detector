@@ -19,6 +19,7 @@ use PhpBench\Attributes as Bench;
 class InitBenchmark extends AbstractBenchmark {
 
   public function setUp(): void {
+    $this->neutralizeEnvironment();
     $this->resetDetector();
   }
 

@@ -21,6 +21,10 @@ use PhpBench\Attributes as Bench;
  */
 class DiscoveryBenchmark extends AbstractBenchmark {
 
+  public function setUp(): void {
+    $this->neutralizeEnvironment();
+  }
+
   /**
    * Benchmark registering custom platforms.
    *
@@ -31,6 +35,7 @@ class DiscoveryBenchmark extends AbstractBenchmark {
   #[Bench\Iterations(20)]
   #[Bench\Warmup(2)]
   #[Bench\RetryThreshold(5)]
+  #[Bench\BeforeMethods(['setUp'])]
   #[Bench\ParamProviders(['provideCustomPlatforms'])]
   public function benchCustomPlatforms(array $params): void {
     $this->resetDetector();
@@ -84,6 +89,7 @@ class DiscoveryBenchmark extends AbstractBenchmark {
   #[Bench\Iterations(20)]
   #[Bench\Warmup(2)]
   #[Bench\RetryThreshold(5)]
+  #[Bench\BeforeMethods(['setUp'])]
   #[Bench\ParamProviders(['provideCustomStacks'])]
   public function benchCustomStacks(array $params): void {
     $this->resetDetector();
@@ -133,6 +139,7 @@ class DiscoveryBenchmark extends AbstractBenchmark {
   #[Bench\Iterations(20)]
   #[Bench\Warmup(2)]
   #[Bench\RetryThreshold(5)]
+  #[Bench\BeforeMethods(['setUp'])]
   #[Bench\ParamProviders(['provideCustomContexts'])]
   public function benchCustomContexts(array $params): void {
     $this->resetDetector();
