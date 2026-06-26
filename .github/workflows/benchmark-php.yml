@@ -75,13 +75,9 @@ jobs:
           echo "" >> pr_comment.md
           echo "_A tracking signal, not a pass/fail gate: microsecond benchmarks land on a different shared CI runner each run, so percentages vs the committed baseline shift run-to-run regardless of the code._" >> pr_comment.md
           echo "" >> pr_comment.md
-          echo "<details>" >> pr_comment.md
-          echo "<summary>Click to see Performance Comparison Table</summary>" >> pr_comment.md
-          echo "" >> pr_comment.md
           echo "<div>" >> pr_comment.md
           sed -n '/<table/,/<\/table>/p' .logs/performance-report.html >> pr_comment.md
           echo "</div>" >> pr_comment.md
-          echo "</details>" >> pr_comment.md
 
       - name: Comment PR with performance results
         if: github.event_name == 'pull_request' && hashFiles('.logs/performance-report.html') != ''
