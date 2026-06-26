@@ -10,11 +10,16 @@ use DrevOps\EnvironmentDetector\Platforms\PlatformInterface;
 use DrevOps\EnvironmentDetector\Stacks\StackInterface;
 use PhpBench\Attributes as Bench;
 
-class DiscoveryBenchmark {
-
-  public function setUp(): void {
-    Environment::reset();
-  }
+/**
+ * Benchmarks how registering extra rings scales the cold detection cost.
+ *
+ * Every subject resets the detector at the start of each revolution, so each
+ * measurement registers the additional rings and runs a full discovery rather
+ * than rebuilding the input and returning early from a warm init().
+ *
+ * @package DrevOps\EnvironmentDetector\Benchmarks
+ */
+class DiscoveryBenchmark extends AbstractBenchmark {
 
   /**
    * Benchmark registering custom platforms.
@@ -26,15 +31,13 @@ class DiscoveryBenchmark {
   #[Bench\Iterations(20)]
   #[Bench\Warmup(2)]
   #[Bench\RetryThreshold(5)]
-  #[Bench\BeforeMethods(['setUp'])]
   #[Bench\ParamProviders(['provideCustomPlatforms'])]
   public function benchCustomPlatforms(array $params): void {
+    $this->resetDetector();
+
     $platforms = [];
-    // Add specified number of custom platforms.
-    static $counter = 0;
     for ($i = 0; $i < intval($params['count']); $i++) {
-      $unique_id = 'test_platform_' . (++$counter);
-      $platforms[] = new class($unique_id) implements PlatformInterface {
+      $platforms[] = new class('test_platform_' . $i) implements PlatformInterface {
 
         public function __construct(
           private readonly string $id,
@@ -81,15 +84,13 @@ class DiscoveryBenchmark {
   #[Bench\Iterations(20)]
   #[Bench\Warmup(2)]
   #[Bench\RetryThreshold(5)]
-  #[Bench\BeforeMethods(['setUp'])]
   #[Bench\ParamProviders(['provideCustomStacks'])]
   public function benchCustomStacks(array $params): void {
+    $this->resetDetector();
+
     $stacks = [];
-    // Add specified number of custom stacks.
-    static $counter = 0;
     for ($i = 0; $i < intval($params['count']); $i++) {
-      $unique_id = 'test_stack_' . (++$counter);
-      $stacks[] = new class($unique_id) implements StackInterface {
+      $stacks[] = new class('test_stack_' . $i) implements StackInterface {
 
         public function __construct(
           private readonly string $id,
@@ -132,15 +133,13 @@ class DiscoveryBenchmark {
   #[Bench\Iterations(20)]
   #[Bench\Warmup(2)]
   #[Bench\RetryThreshold(5)]
-  #[Bench\BeforeMethods(['setUp'])]
   #[Bench\ParamProviders(['provideCustomContexts'])]
   public function benchCustomContexts(array $params): void {
+    $this->resetDetector();
+
     $contexts = [];
-    // Add specified number of custom contexts.
-    static $counter = 0;
     for ($i = 0; $i < intval($params['count']); $i++) {
-      $unique_id = 'test_context_' . (++$counter);
-      $contexts[] = new class($unique_id) implements ContextInterface {
+      $contexts[] = new class('test_context_' . $i) implements ContextInterface {
 
         public function __construct(
           private readonly string $id,
