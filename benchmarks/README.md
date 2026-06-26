@@ -25,13 +25,13 @@ Reference points from the CI runner (Linux, PHP 8.3) - the same environment the 
 
 Peak memory is ~2 MB across all subjects.
 
-## Optimization opportunities
+## Optimization notes
 
-Candidates for a dedicated performance pass, with the evidence the suite surfaces:
+What the suite surfaced, and where it landed:
 
-1. **Native-host detection cost.** `benchDetectDrupalNative` (~41 μs) is dramatically slower than `benchDetectDrupalContainer` (~12 μs) despite the container doing more contextualization work. The native path pays for `Container::isContainer()`'s filesystem probes (`file_exists('/.dockerenv')`, `file_exists('/.dockerinit')`, `is_readable('/proc/1/cgroup')`) and, during contextualization, the reflection fallback in `AbstractStack::contextualize()` / `AbstractPlatform::contextualize()` (`Native` is not a `DrupalContextualizerInterface`, so a method name is built via `ReflectionClass::getShortName()`). The container path short-circuits `isContainer()` on an env var and dispatches through the typed fast path. This gap is the suite's clearest optimization target.
-2. **`is()` re-reads the env var.** `Environment::is()` calls `getenv('ENVIRONMENT_TYPE')` on every invocation even though the type is already resolved. Caching it in a static property realizes the documented "statically cached" design and speeds the repeated-check path.
-3. **Duplicated dispatch.** `AbstractPlatform::contextualize()` and `AbstractStack::contextualize()` are identical; the shared dispatch can move to a trait.
+1. **Container probing ran per stack.** Every container-family stack (Ddev, Lando, Container) inherits `Container::isContainer()`, so a single native-host detection re-ran the same env/filesystem probe up to three times. `Container::isContainer()` now memoises its result for the run (cleared on `Environment::reset()`), so the probe runs once while a subclass overriding `isContainer()` still opts out. This cut `benchDetectDrupalNative` by ~19% locally (more on Linux, where the probe actually reads `/proc/1/cgroup`). The remaining single probe is inherent to detecting containerisation.
+2. **Duplicated dispatch.** `AbstractPlatform::contextualize()` and `AbstractStack::contextualize()` were byte-identical; they now share the `DispatchesContextualization` trait, which dispatches the built-in Drupal context through its typed interface and falls back to reflection only for custom contexts.
+3. **`is()` reads the env var, by design.** `Environment::is()` calls `getenv('ENVIRONMENT_TYPE')` each time. This is deliberate: the env var is the single source of truth for the type - both the override input and the published output. Caching it in a static would create a second store that can silently diverge, so the per-call `getenv()` stays.
 
 ## Comparison and baseline
 
