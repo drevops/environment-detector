@@ -341,6 +341,20 @@ final class EnvironmentTest extends EnvironmentDetectorTestCase {
     $this->assertSame('ddev', Environment::getActiveStack()?->id());
   }
 
+  public function testGetActiveStackReturnsDdevByMarkerAlone(): void {
+    self::envSet('IS_DDEV_PROJECT', 'TRUE');
+
+    // The DDEV marker alone selects the DDEV stack, with no container probe.
+    $this->assertSame('ddev', Environment::getActiveStack()?->id());
+  }
+
+  public function testGetActiveStackReturnsLandoByMarkerAlone(): void {
+    self::envSet('LANDO_INFO', 'TRUE');
+
+    // The Lando marker alone selects the Lando stack, with no container probe.
+    $this->assertSame('lando', Environment::getActiveStack()?->id());
+  }
+
   public function testGetActiveStackReturnsNativeOnBareMetal(): void {
     $this->requireBareMetalHost();
 
