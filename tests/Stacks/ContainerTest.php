@@ -116,6 +116,65 @@ final class ContainerTest extends StackTestCase {
         ],
       ],
     ];
+    // The SERVICE_HOSTS env var appends a custom host to the allowlist.
+    yield 'single custom service host' => [
+      fn(): null => self::envSet('SERVICE_HOSTS', 'php'),
+      [
+        'trusted_host_patterns' => [
+          '^(web|app|webserver|nginx|apache|apache2|php)$',
+        ],
+      ],
+    ];
+    // Multiple comma-separated hosts are all appended, in order.
+    yield 'multiple custom service hosts' => [
+      fn(): null => self::envSet('SERVICE_HOSTS', 'php,cli'),
+      [
+        'trusted_host_patterns' => [
+          '^(web|app|webserver|nginx|apache|apache2|php|cli)$',
+        ],
+      ],
+    ];
+    // Surrounding whitespace is trimmed and blank entries are dropped.
+    yield 'whitespace and blank service hosts' => [
+      fn(): null => self::envSet('SERVICE_HOSTS', ' php , , cli ,'),
+      [
+        'trusted_host_patterns' => [
+          '^(web|app|webserver|nginx|apache|apache2|php|cli)$',
+        ],
+      ],
+    ];
+    // A regex metacharacter in a custom host is escaped, so the dot stays
+    // literal and cannot widen the trusted-host match.
+    yield 'custom service host is regex-escaped' => [
+      fn(): null => self::envSet('SERVICE_HOSTS', 'php.internal'),
+      [
+        'trusted_host_patterns' => [
+          '^(web|app|webserver|nginx|apache|apache2|php\.internal)$',
+        ],
+      ],
+    ];
+    // A custom host duplicating a built-in is emitted only once.
+    yield 'duplicate built-in service host' => [
+      fn(): null => self::envSet('SERVICE_HOSTS', 'web,php'),
+      [
+        'trusted_host_patterns' => [
+          '^(web|app|webserver|nginx|apache|apache2|php)$',
+        ],
+      ],
+    ];
+    // Extended allowlist and the LOCALDEV_URL host coexist, allowlist first.
+    yield 'custom service host with localdev url' => [
+      function (): void {
+          self::envSet('SERVICE_HOSTS', 'php');
+          self::envSet('LOCALDEV_URL', 'https://mysite.local');
+      },
+      [
+        'trusted_host_patterns' => [
+          '^(web|app|webserver|nginx|apache|apache2|php)$',
+          '^mysite\.local$',
+        ],
+      ],
+    ];
   }
 
 }

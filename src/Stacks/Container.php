@@ -71,8 +71,27 @@ class Container extends AbstractStack implements DrupalContextualizerInterface {
   public function contextualizeDrupal(Drupal $context): void {
     $settings = &$context->settings;
 
-    // Internal service hostnames, reachable container-to-container.
-    $settings['trusted_host_patterns'][] = '^(' . implode('|', static::SERVICE_HOSTS) . ')$';
+    // Internal service hostnames, reachable container-to-container. The
+    // SERVICE_HOSTS env var contributes extra comma-separated hosts on top of
+    // the built-in allowlist. Every host is escaped before joining the
+    // alternation: the pattern feeds the security-sensitive
+    // trusted_host_patterns, so a host carrying a regex metacharacter must not
+    // be able to widen the match.
+    $hosts = static::SERVICE_HOSTS;
+
+    $extra = getenv('SERVICE_HOSTS');
+    if (is_string($extra)) {
+      foreach (explode(',', $extra) as $host) {
+        $host = trim($host);
+
+        if ($host !== '') {
+          $hosts[] = $host;
+        }
+      }
+    }
+
+    $hosts = array_map(static fn(string $host): string => preg_quote($host, '#'), $hosts);
+    $settings['trusted_host_patterns'][] = '^(' . implode('|', array_unique($hosts)) . ')$';
 
     // The site's local development URL, reduced to its host: a port, path, or
     // credentials would never match Drupal's host-only trusted-host check.
