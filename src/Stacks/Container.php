@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace DrevOps\EnvironmentDetector\Stacks;
 
-use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
 use DrevOps\EnvironmentDetector\Contexts\Drupal;
+use DrevOps\EnvironmentDetector\Contexts\DrupalContextualizerInterface;
 
 /**
  * Container stack (generic containerisation).
  *
  * @package DrevOps\EnvironmentDetector\Stacks
  */
-class Container extends AbstractStack {
+class Container extends AbstractStack implements DrupalContextualizerInterface {
 
   /**
    * {@inheritdoc}
@@ -68,11 +68,7 @@ class Container extends AbstractStack {
   /**
    * {@inheritdoc}
    */
-  public function contextualize(ContextInterface $context): void {
-    if (!$context instanceof Drupal) {
-      return;
-    }
-
+  public function contextualizeDrupal(Drupal $context): void {
     $settings = &$context->settings;
 
     // Internal service hostnames, reachable container-to-container.

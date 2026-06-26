@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace DrevOps\EnvironmentDetector\Stacks;
 
 use DrevOps\EnvironmentDetector\Contexts\ContextInterface;
+use DrevOps\EnvironmentDetector\Contexts\Drupal;
+use DrevOps\EnvironmentDetector\Contexts\DrupalContextualizerInterface;
 
 /**
  * Abstract stack.
@@ -30,14 +32,23 @@ abstract class AbstractStack implements StackInterface {
   /**
    * {@inheritdoc}
    */
-  // phpcs:disable DrupalPractice.Commenting.CommentEmptyLine.SpacingAfter
-  // phpcs:disable Drupal.Commenting.FunctionComment.WrongStyle
-  // phpcs:disable Squiz.WhiteSpace.FunctionSpacing.After
   public function contextualize(ContextInterface $context): void {
-    // Noop. Override to inject context-specific settings.
+    // Known interfaces - optimised for speed.
+    if ($this instanceof DrupalContextualizerInterface && $context instanceof Drupal) {
+      // Only the most-derived contextualizeDrupal() runs, so a subclass that
+      // overrides it must call parent::contextualizeDrupal() to keep the
+      // parent's settings.
+      $this->contextualizeDrupal($context);
+      return;
+    }
+
+    // Runtime.
+    $method = 'contextualize' . (new \ReflectionClass($context))->getShortName();
+    $callable = [$this, $method];
+
+    if (is_callable($callable)) {
+      $callable($context);
+    }
   }
-  // phpcs:enable DrupalPractice.Commenting.CommentEmptyLine.SpacingAfter
-  // phpcs:enable Drupal.Commenting.FunctionComment.WrongStyle
-  // phpcs:enable Squiz.WhiteSpace.FunctionSpacing.After
 
 }

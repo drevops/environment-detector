@@ -64,7 +64,7 @@ final class SkprTest extends PlatformTestCase {
   }
 
   public function testContextualizeNonDrupalIsNoop(): void {
-    // A non-Drupal context hits the type guard and returns without touching it.
+    // A non-Drupal context maps to no per-context method, so nothing happens.
     (new Skpr())->contextualize(new NotDrupalContext());
 
     $this->expectNotToPerformAssertions();
