@@ -318,7 +318,7 @@ Beyond the platform and stack detection signals the hosting or CI provider sets 
 | `DRUPAL_TMP_PATH_IS_SHARED` | When truthy, points `file_temp_path` at the shared GFS mount (`/mnt/gfs/<group>.<env>/tmp`). | Acquia | `file_temp_path` stays `/tmp`. |
 | `DRUPAL_ACQUIA_SETTINGS_FILE` | Overrides the path to the Acquia-provided `*-settings.inc` file that is included. | Acquia | `/var/www/site-php/<group>/<group>-settings.inc`. |
 | `LOCALDEV_URL` | The site's local development URL, added as a Drupal `trusted_host_patterns` entry (the scheme is stripped). | Container stack | Only the built-in service-host allowlist (`web`, `app`, `webserver`, `nginx`, `apache`, `apache2`) is added. |
-| `SERVICE_HOSTS` | Comma-separated internal service hostnames appended to the built-in container allowlist, each added as a Drupal `trusted_host_patterns` entry (entries are trimmed, blanks dropped, and regex metacharacters escaped). | Container stack | Only the built-in service-host allowlist (`web`, `app`, `webserver`, `nginx`, `apache`, `apache2`) is added. |
+| `SERVICE_HOSTS` | Comma-separated internal service hostnames merged with the built-in container allowlist into a single Drupal `trusted_host_patterns` alternation regex (entries are trimmed, blanks dropped, and regex metacharacters escaped). | Container stack | Only the built-in service-host allowlist (`web`, `app`, `webserver`, `nginx`, `apache`, `apache2`) is added. |
 
 The `DRUPAL_*` variables take effect only when the [Drupal](#contexts) context is active.
 
