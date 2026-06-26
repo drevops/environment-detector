@@ -105,9 +105,9 @@ Detection is modelled as nested rings. A run wraps from an outer ring down to th
 #### Baseline Management
 
 - Baselines stored in `.phpbench/storage/` directory (tracked in git)
-- CI automatically compares performance against baseline with a ±15% threshold, set above the run-to-run and cross-machine noise floor of these microsecond-scale subjects (a tighter gate produced false failures, including on docs-only changes)
-- Baselines are updated manually by running `composer benchmark-baseline` and committing the changes
-- The committed baseline is generated locally, so its absolute times differ from the CI runner; the ±15% tolerance absorbs that offset. Generating the baseline on the CI runner would remove it and is a candidate future improvement
+- The committed baseline is generated on the CI runner, so the gate compares like-for-like rather than across machines
+- CI automatically compares each pull request against the baseline with a ±15% threshold, set above the run-to-run noise floor of these microsecond-scale subjects (a tighter gate produced false failures, including on docs-only changes)
+- Refresh the baseline by running the "Benchmark PHP" workflow manually (`workflow_dispatch`) on the target branch; the job regenerates it on the runner, removes the previous one, and commits the single replacement back (no merge to the default branch needed first)
 - Performance regressions exceeding the ±15% threshold will fail CI builds
 
 ## File Structure

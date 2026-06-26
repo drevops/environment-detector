@@ -141,9 +141,10 @@ jobs:
       - name: Regenerate baseline on CI
         if: github.event_name == 'workflow_dispatch'
         run: |
+          rm -rf .phpbench/storage
           composer benchmark-baseline
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .phpbench/storage
+          git add -A .phpbench/storage
           git commit -m "Regenerated performance baseline on CI. [skip ci]" || echo "Baseline unchanged"
           git push origin HEAD:${{ github.ref_name }}
