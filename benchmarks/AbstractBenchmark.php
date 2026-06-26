@@ -16,12 +16,12 @@ abstract class AbstractBenchmark {
   /**
    * Every env var a built-in platform or stack reads to detect itself.
    *
-   * Benchmarks run wherever CI happens to place them - and a CI runner sets its
-   * own platform signals (GitHub Actions exports GITHUB_WORKFLOW, etc.). Left in
+   * Benchmarks run wherever CI places them, and a CI runner sets its own
+   * platform signals (GitHub Actions exports GITHUB_WORKFLOW, etc.). Left in
    * place, those would activate a second platform and make detection
-   * non-deterministic or even collide with the scenario a benchmark sets up. The
-   * environment is cleared to this known baseline before each scenario so a run
-   * measures the same thing on every host.
+   * non-deterministic, or collide with the scenario a benchmark sets up. The
+   * environment is cleared to this known baseline before each scenario so a
+   * run measures the same thing on every host.
    *
    * @var string[]
    */
@@ -75,8 +75,8 @@ abstract class AbstractBenchmark {
   /**
    * Reset the detector and cached type so the next init() detects from scratch.
    *
-   * Run at the start of every measured revolution; scenario env vars set for the
-   * iteration are left intact so each revolution re-detects the same scenario.
+   * Run at the start of every measured revolution; scenario env vars set for
+   * the iteration are left intact so each revolution re-detects that scenario.
    */
   protected function resetDetector(): void {
     Environment::reset();
