@@ -67,8 +67,7 @@ class Container extends AbstractStack implements DrupalContextualizerInterface {
    */
   protected function detectContainer(): bool {
     // No single marker reliably proves containerisation across runtimes, so
-    // probe several independent signals in turn: env vars set by tooling, the
-    // engine-created marker files, then the control group of PID 1.
+    // several independent signals are probed in turn until one matches.
     if (getenv('DOCKER') !== FALSE) {
       return TRUE;
     }
