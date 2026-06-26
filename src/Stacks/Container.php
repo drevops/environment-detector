@@ -27,6 +27,11 @@ class Container extends AbstractStack implements DrupalContextualizerInterface {
   public const SERVICE_HOSTS = ['web', 'app', 'webserver', 'nginx', 'apache', 'apache2'];
 
   /**
+   * Cached result of the container probe, shared across the run.
+   */
+  protected static ?bool $cachedIsContainer = NULL;
+
+  /**
    * {@inheritdoc}
    */
   public function active(): bool {
@@ -40,6 +45,28 @@ class Container extends AbstractStack implements DrupalContextualizerInterface {
    *   TRUE if running inside a container, FALSE otherwise.
    */
   public function isContainer(): bool {
+    // Containerisation is fixed for the lifetime of the process, so the probe
+    // runs once and the result is shared across every container-family stack
+    // that inherits this method (Ddev, Lando and the generic container would
+    // otherwise each re-run it). A subclass overriding isContainer() opts out
+    // of the cache and is probed on its own terms.
+    return self::$cachedIsContainer ??= $this->detectContainer();
+  }
+
+  /**
+   * Reset the cached container probe so the next detection re-runs it.
+   */
+  public static function resetCache(): void {
+    self::$cachedIsContainer = NULL;
+  }
+
+  /**
+   * Probe the host for the signals that indicate a container.
+   *
+   * @return bool
+   *   TRUE if running inside a container, FALSE otherwise.
+   */
+  protected function detectContainer(): bool {
     // No single marker reliably proves containerisation across runtimes, so
     // probe several independent signals in turn: env vars set by tooling, the
     // engine-created marker files, then the control group of PID 1.

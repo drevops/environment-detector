@@ -6,12 +6,15 @@ namespace DrevOps\EnvironmentDetector\Tests\Platforms;
 
 use DrevOps\EnvironmentDetector\Contexts\Drupal;
 use DrevOps\EnvironmentDetector\Contexts\DrupalContextualizerInterface;
+use DrevOps\EnvironmentDetector\DispatchesContextualization;
 use DrevOps\EnvironmentDetector\Platforms\AbstractPlatform;
 use DrevOps\EnvironmentDetector\Tests\EnvironmentDetectorTestCase;
 use DrevOps\EnvironmentDetector\Tests\Fixtures\NotDrupalContext;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\CoversTrait;
 
 #[CoversClass(AbstractPlatform::class)]
+#[CoversTrait(DispatchesContextualization::class)]
 final class AbstractPlatformTest extends EnvironmentDetectorTestCase {
 
   public function testIdDefaultsToConst(): void {
