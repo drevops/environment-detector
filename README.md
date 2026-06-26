@@ -217,7 +217,7 @@ Environment::init(platforms: [new CustomHosting()]);
 
 ## Stacks
 
-A stack is the substrate the run sits in. Stacks never decide the type. Exactly one stack is always active - the most specific stack that matches, or the native host as the last-resort fallback. `Container` is the generic container fallback, `Ddev` and `Lando` are specific containers that match only when running inside a container, and `Native` is the native host, used when nothing else matches. Built-ins:
+A stack is the substrate the run sits in. Stacks never decide the type. Exactly one stack is always active - the most specific stack that matches, or the native host as the last-resort fallback. `Container` is the generic container fallback, matched by probing for containerisation; `Ddev` and `Lando` are specific containers, matched by the marker their tool sets (`IS_DDEV_PROJECT`, `LANDO_INFO`); and `Native` is the native host, used when nothing else matches. Built-ins:
 
 - [Container](src/Stacks/Container.php)
 - [DDEV](src/Stacks/Ddev.php)

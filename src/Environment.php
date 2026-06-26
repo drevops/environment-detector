@@ -174,14 +174,16 @@ class Environment {
   ];
 
   /**
-   * Pre-defined stack classes, ordered most specific first.
+   * Pre-defined specific stack classes, ordered most specific first.
+   *
+   * The generic Container and Native fallbacks are appended in
+   * collectStacks() so they always run after these and any user additions.
    *
    * @var array<string>
    */
   protected const STACKS = [
     Ddev::class,
     Lando::class,
-    Container::class,
   ];
 
   /**
@@ -442,16 +444,11 @@ class Environment {
    */
   public static function getActiveStack(): ?StackInterface {
     if (!static::$stack instanceof StackInterface) {
-      // Registered most-specific first, so the first match is the narrowest
-      // that applies: a specific container, then the generic container, then
-      // the native host as the last-resort fallback.
+      // Registered most-specific first, so the first stack whose own signal
+      // matches wins: a specific container, matched by the marker its tool
+      // sets (DDEV, Lando); then the generic container, matched by probing for
+      // containerisation; then the native host as the last-resort fallback.
       foreach (static::collectStacks() as $stack) {
-        // A container-family stack only counts when actually inside a
-        // container, so its own marker alone cannot win on bare metal.
-        if ($stack instanceof Container && !$stack->isContainer()) {
-          continue;
-        }
-
         if ($stack->active()) {
           static::$stack = $stack;
           break;
@@ -526,10 +523,13 @@ class Environment {
     if (!static::$stacks) {
       static::$stacks = [];
 
-      // Native is appended after any additional stacks so it stays the
-      // last-resort fallback: a user-supplied stack can win, but on bare metal
-      // - where nothing else matches - the native host always does.
-      $instances = array_merge(self::STACKS, $additional, [Native::class]);
+      // The generic fallbacks are appended after the specific stacks and any
+      // user additions so a more specific stack is always matched first: the
+      // generic container yields to a specific container (DDEV, Lando, or a
+      // supplied one), and the native host - which always matches - stays the
+      // final fallback. A stack that extends one of these generics is therefore
+      // always tried ahead of it.
+      $instances = array_merge(self::STACKS, $additional, [Container::class, Native::class]);
 
       foreach ($instances as $instance) {
         $instance = is_string($instance) ? new $instance() : $instance;

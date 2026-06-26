@@ -46,10 +46,9 @@ class Container extends AbstractStack implements DrupalContextualizerInterface {
    */
   public function isContainer(): bool {
     // Containerisation is fixed for the lifetime of the process, so the probe
-    // runs once and the result is shared across every container-family stack
-    // that inherits this method (Ddev, Lando and the generic container would
-    // otherwise each re-run it). A subclass overriding isContainer() opts out
-    // of the cache and is probed on its own terms.
+    // is computed once per run and the result reused on any later call. A
+    // subclass overriding isContainer() opts out of the cache and is probed on
+    // its own terms.
     return self::$cachedIsContainer ??= $this->detectContainer();
   }
 
@@ -68,8 +67,7 @@ class Container extends AbstractStack implements DrupalContextualizerInterface {
    */
   protected function detectContainer(): bool {
     // No single marker reliably proves containerisation across runtimes, so
-    // probe several independent signals in turn: env vars set by tooling, the
-    // engine-created marker files, then the control group of PID 1.
+    // several independent signals are probed in turn until one matches.
     if (getenv('DOCKER') !== FALSE) {
       return TRUE;
     }

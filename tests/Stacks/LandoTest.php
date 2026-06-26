@@ -14,8 +14,11 @@ final class LandoTest extends StackTestCase {
 
   public static function dataProviderActive(): \Iterator|array {
     yield [fn(): null => NULL, FALSE];
-    // The Lando marker alone is not enough: Lando must be a container first.
-    yield [fn(): null => self::envSet('LANDO_INFO', 'TRUE'), FALSE];
+    // The Lando marker is definitive: Lando always runs in a container, so the
+    // marker alone makes it the active stack with no separate container probe.
+    yield [fn(): null => self::envSet('LANDO_INFO', 'TRUE'), TRUE];
+    // An incidental container signal alongside the marker still resolves to
+    // Lando, ahead of the generic container.
     yield [
       function (): void {
           self::envSet('DOCKER', 'TRUE');
