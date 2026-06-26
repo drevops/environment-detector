@@ -10,9 +10,24 @@ on:
       - 'feature/**'
   workflow_dispatch:
 
+# Read-only by default; each job widens only the scope it needs.
+permissions:
+  contents: read
+
 jobs:
+  # Report-only: runs the benchmark and posts its comparison, but never fails
+  # the build. Microsecond benchmarks land on a different shared runner each run,
+  # so absolute times shift run-to-run regardless of the code - a hard gate
+  # against a committed baseline cannot be made reliable.
   benchmark-php:
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
+
+    # Write access only to the PR comment and the trend issue; no repo writes.
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
 
     steps:
       - name: Checkout code
@@ -34,29 +49,16 @@ jobs:
       - name: Install dependencies
         run: composer install
 
-      - name: Run performance tests with baseline comparison
+      # continue-on-error keeps a perf delta from failing the build, while the
+      # step status still reflects a genuine benchmark error (no exit code is
+      # swallowed), so a broken benchmark is visible rather than masked.
+      - name: Run performance benchmarks
         id: perf-test
-        run: |
-          if ./vendor/bin/phpbench log 2>/dev/null | grep -q "baseline"; then
-            echo "Baseline found, running comparison with 5% threshold"
-            composer benchmark -- --assert="mode(variant.time.avg) <= mode(baseline.time.avg) +/- 5%"
-          else
-            echo "No baseline found, running without comparison"
-            composer benchmark || echo "Benchmark completed (no baseline to compare)"
-          fi
+        run: composer benchmark
         continue-on-error: true
 
-      - name: Check performance test result
-        if: steps.perf-test.outcome == 'failure'
-        run: |
-          echo "## ⚠️ Performance Regression Detected" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "One or more benchmarks exceeded the ±5% threshold compared to baseline." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "See the full performance report in the artifacts or PR comment for details." >> $GITHUB_STEP_SUMMARY
-          exit 1
-
       - name: Upload performance report as artifact
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{github.job}}-performance-report
@@ -64,25 +66,17 @@ jobs:
             .logs/performance-report.csv
             .logs/performance-report.json
             .logs/performance-report.html
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Format performance results for PR comment
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && hashFiles('.logs/performance-report.html') != ''
         run: |
-          echo "## 🚀 Performance Test Results" >> pr_comment.md
+          echo "## 🚀 Performance comparison (informational)" >> pr_comment.md
           echo "" >> pr_comment.md
-
-          if [ "${{ steps.perf-test.outcome }}" == "success" ]; then
-            echo "✅ Performance is within acceptable limits (±5% threshold)" >> pr_comment.md
-          else
-            echo "⚠️ **Performance regression detected!** One or more benchmarks exceeded the ±5% threshold." >> pr_comment.md
-          fi
-
+          echo "_A tracking signal, not a pass/fail gate: microsecond benchmarks land on a different shared CI runner each run, so percentages vs the committed baseline shift run-to-run regardless of the code._" >> pr_comment.md
           echo "" >> pr_comment.md
           echo "<details>" >> pr_comment.md
           echo "<summary>Click to see Performance Comparison Table</summary>" >> pr_comment.md
-          echo "" >> pr_comment.md
-          echo "_Percentages show change compared to baseline_" >> pr_comment.md
           echo "" >> pr_comment.md
 
           # Extract table and remove leading whitespace
@@ -92,14 +86,14 @@ jobs:
           echo "</details>" >> pr_comment.md
 
       - name: Comment PR with performance results
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && hashFiles('.logs/performance-report.html') != ''
         uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body-path: pr_comment.md
 
       - name: Find performance benchmarks issue
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && hashFiles('.logs/performance-report.html') != ''
         id: find-issue
         run: |
           ISSUE_NUMBER=$(gh issue list --state open --search "Performance benchmarks" --json number --jq '.[0].number')
@@ -108,7 +102,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Format performance results for issue comment
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && hashFiles('.logs/performance-report.html') != ''
         run: |
           echo "## 📊 Performance Benchmark Results" > issue_comment.md
           echo "" >> issue_comment.md
@@ -125,3 +119,44 @@ jobs:
           issue-number: ${{ steps.find-issue.outputs.issue-number }}
           body-path: issue_comment.md
           edit-mode: replace
+
+  # Manual baseline refresh: regenerates the baseline on the CI runner (the same
+  # environment the comparison runs in) and commits the single replacement back.
+  # Run it from the Actions tab on the branch whose baseline you want to refresh.
+  refresh-baseline:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    # Repo write access is confined to this manual, maintainer-triggered job.
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6
+        with:
+          path: /tmp/composer-cache
+          key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: 8.3
+          extensions: none, ctype, dom, filter, hash, libxml, mbstring, pcre, pdo, phar, posix, readline, reflection, session, simplexml, spl, tokenizer, xml, xmlwriter
+          tools: none
+
+      - name: Install dependencies
+        run: composer install
+
+      - name: Regenerate baseline on CI
+        run: |
+          rm -rf .phpbench/storage
+          composer benchmark-baseline
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A .phpbench/storage
+          git commit -m "Regenerated performance baseline on CI. [skip ci]" || echo "Baseline unchanged"
+          git push origin HEAD:${{ github.ref_name }}

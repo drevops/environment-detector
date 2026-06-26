@@ -7,12 +7,20 @@ namespace DrevOps\EnvironmentDetector\Benchmarks;
 use DrevOps\EnvironmentDetector\Environment;
 use PhpBench\Attributes as Bench;
 
-class InitBenchmark {
+/**
+ * Benchmarks repeated type checks once the environment is warm.
+ *
+ * The detector is reset once per iteration, so init() runs in full on the first
+ * revolution and the measured cost is dominated by the repeated isProd() checks
+ * that follow - the hot path an application takes after detection has settled.
+ *
+ * @package DrevOps\EnvironmentDetector\Benchmarks
+ */
+class InitBenchmark extends AbstractBenchmark {
 
   public function setUp(): void {
-    Environment::reset();
-    putenv('ENVIRONMENT_TYPE');
-    unset($_ENV['ENVIRONMENT_TYPE'], $_SERVER['ENVIRONMENT_TYPE']);
+    $this->neutralizeEnvironment();
+    $this->resetDetector();
   }
 
   /**

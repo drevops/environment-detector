@@ -93,22 +93,21 @@ Detection is modelled as nested rings. A run wraps from an outer ring down to th
 
 ### Performance Testing
 
-- PHPBench for measuring constant-based loading performance
+- PHPBench measures the real detection and contextualization hot paths. Cold-path subjects reset the detector each revolution (so a full once-per-request detection is measured, not a warm early return); the warm subject keeps a per-iteration reset to measure repeated checks.
 - Benchmarks in `benchmarks/` directory measure:
-  - Platform and stack loading via constants (no filesystem scanning)
-  - Context loading performance
-  - Full initialization overhead
-  - Type checking after caching
-  - Multiple platform/stack/context registration impact with scaling analysis (1,2,5,10 additions)
+  - `DetectionBenchmark` - cold detection of the local environment, of an active Drupal context on the native and container stacks, of an active platform resolving its type, and of the full platform + stack + context path
+  - `InitBenchmark` - repeated `isProd()` type checks once the environment is warm
+  - `DiscoveryBenchmark` - how registering extra platforms/stacks/contexts (0,1,2,5,10) scales the cold detection cost
 - Reports generated as JSON and HTML in `.logs/performance-report.*`
 - CI runs performance tests without xdebug/pcov for accurate measurements
+- See `benchmarks/README.md` for the latest performance verdict and the identified optimization opportunities
 
 #### Baseline Management
 
 - Baselines stored in `.phpbench/storage/` directory (tracked in git)
-- CI automatically compares performance against baseline with ±5% threshold
-- Baselines are updated manually by running `composer benchmark-baseline` and committing the changes
-- Performance regressions exceeding 5% threshold will fail CI builds
+- The benchmark is report-only: it runs on every pull request and posts its comparison against the committed baseline, but never fails CI. Each CI run lands on a different shared runner whose speed varies ~15-25% between jobs, so a committed-baseline hard gate cannot be made reliable (a reliable gate would require measuring baseline and candidate in the same job on the same runner)
+- The committed baseline is the comparison reference, generated on a CI runner; refresh it by running the "Benchmark PHP" workflow manually (`workflow_dispatch`) on the target branch, which regenerates it on the runner, removes the previous one, and commits the single replacement back
+- Results are also posted as a running trend on the "Performance benchmarks" issue on each push to main
 
 ## File Structure
 
