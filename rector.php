@@ -45,7 +45,7 @@ return RectorConfig::configure()
     phpunitCodeQuality: TRUE,
   )
   ->withSets([
-    PHPUnitSetList::PHPUNIT_120,
+    PHPUnitSetList::COMPOSER_BASED,
   ])
   ->withRules([
     DeclareStrictTypesRector::class,
