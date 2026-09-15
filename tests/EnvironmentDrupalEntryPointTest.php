@@ -17,7 +17,7 @@ final class EnvironmentDrupalEntryPointTest extends EnvironmentDetectorTestCase 
     $settings = ['hash_salt' => 'abc'];
     $config = [];
 
-    require dirname(__DIR__) . '/environment.drupal.php';
+    require __DIR__ . '/../environment.drupal.php';
 
     // The entry point wires the site's $settings into an active Drupal context,
     // so detection writes back the type, the universal loopback set, and the
